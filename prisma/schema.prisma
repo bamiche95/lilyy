@@ -1,0 +1,316 @@
+// Lilyy Bakers — Prisma schema
+// Phase 1: domain models only. The four Better Auth models (user, session,
+// account, verification) are appended by `npx auth generate` in the next step,
+// after which the User <-> domain relations are added by hand.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum ProductCategory {
+  BREAD
+  CAKE
+  PASTRY
+  COOKIES
+  SAVOURY
+  SEASONAL
+  DRINKS
+}
+
+enum FulfilmentType {
+  DELIVERY
+  PICKUP
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  BAKING
+  READY
+  OUT_FOR_DELIVERY
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentStatus {
+  UNPAID
+  PAID
+  PARTIALLY_REFUNDED
+  REFUNDED
+  FAILED
+}
+
+enum PaymentMethod {
+  CARD
+  CASH_ON_DELIVERY
+  BANK_TRANSFER
+}
+
+enum SupportStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum EmailStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+enum EmailType {
+  TEST
+  ORDER_CONFIRMATION
+  ORDER_STATUS
+  SUPPORT_ACK
+  SUPPORT_REPLY
+  CONTACT
+  WELCOME
+  PASSWORD_RESET
+}
+
+// ---------------------------------------------------------------------------
+// Catalogue
+// ---------------------------------------------------------------------------
+
+model Product {
+  id             String          @id @default(cuid())
+  slug           String          @unique
+  nameEn         String
+  nameNo         String
+  descriptionEn  String          @db.Text
+  descriptionNo  String          @db.Text
+  price          Decimal         @db.Decimal(10, 2)
+  compareAtPrice Decimal?        @db.Decimal(10, 2)
+  category       ProductCategory @default(BREAD)
+  images         String[]        @default([])
+  ingredientsEn  String?         @db.Text
+  ingredientsNo  String?         @db.Text
+  allergensEn    String[]        @default([])
+  allergensNo    String[]        @default([])
+  weightGrams    Int?
+  serves         Int?
+  isFeatured     Boolean         @default(false)
+  isAvailable    Boolean         @default(true)
+  stock          Int             @default(0)
+  leadTimeHours  Int             @default(24)
+  sortOrder      Int             @default(0)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  orderItems OrderItem[]
+
+  @@index([category, isAvailable])
+  @@index([isFeatured, sortOrder])
+  @@map("products")
+}
+
+// ---------------------------------------------------------------------------
+// Orders
+// ---------------------------------------------------------------------------
+
+model Order {
+  id                    String         @id @default(cuid())
+  orderNumber           String         @unique
+  // Nullable: guest checkout is allowed, and deleting a user must not destroy
+  // order history. The User relation is added after `auth generate`.
+  userId                String?
+  customerName          String
+  customerEmail         String
+  customerPhone         String
+  fulfilment            FulfilmentType @default(DELIVERY)
+  status                OrderStatus    @default(PENDING)
+  paymentStatus         PaymentStatus  @default(UNPAID)
+  paymentMethod         PaymentMethod  @default(CARD)
+  subtotal              Decimal        @db.Decimal(10, 2)
+  deliveryFee           Decimal        @default(0) @db.Decimal(10, 2)
+  discount              Decimal        @default(0) @db.Decimal(10, 2)
+  total                 Decimal        @db.Decimal(10, 2)
+  currency              String         @default("NOK")
+  deliveryAddress       String?
+  deliveryCity          String?
+  deliveryPostalCode    String?
+  deliveryNotes         String?        @db.Text
+  preferredDate         DateTime?
+  pickupLocation        String?
+  stripeSessionId       String?
+  stripePaymentIntentId String?
+  paidAt                DateTime?
+  cancelledAt           DateTime?
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+
+  user  User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  items OrderItem[]
+
+  @@index([userId, createdAt])
+  @@index([customerEmail])
+  @@index([status, createdAt])
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  productId String?
+  nameEn    String
+  nameNo    String
+  unitPrice Decimal @db.Decimal(10, 2)
+  quantity  Int
+  lineTotal Decimal @db.Decimal(10, 2)
+  notes     String?
+
+  order   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([orderId])
+  @@index([productId])
+  @@map("order_items")
+}
+
+// ---------------------------------------------------------------------------
+// Support
+// ---------------------------------------------------------------------------
+
+model SupportThread {
+  id            String        @id @default(cuid())
+  userId        String?
+  orderId       String?
+  subject       String
+  customerName  String
+  customerEmail String
+  status        SupportStatus @default(OPEN)
+  topic         String        @default("general")
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  user     User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  messages SupportMessage[]
+
+  @@index([customerEmail])
+  @@index([status, updatedAt])
+  @@index([userId])
+  @@map("support_threads")
+}
+
+model SupportMessage {
+  id         String   @id @default(cuid())
+  threadId   String
+  authorType String // "customer" | "admin"
+  authorName String
+  body       String   @db.Text
+  isRead     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  thread SupportThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@index([threadId, createdAt])
+  @@map("support_messages")
+}
+
+// ---------------------------------------------------------------------------
+// Email delivery log
+// ---------------------------------------------------------------------------
+
+model EmailLog {
+  id           String      @id @default(cuid())
+  userId       String?
+  type         EmailType   @default(TEST)
+  to           String
+  from         String?
+  subject      String
+  status       EmailStatus @default(PENDING)
+  providerId   String?
+  errorMessage String?     @db.Text
+  metadata     Json?
+  createdAt    DateTime    @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([type, createdAt])
+  @@index([to])
+  @@index([userId])
+  @@map("email_logs")
+}
+
+model User {
+  id             String          @id
+  name           String
+  email          String
+  emailVerified  Boolean         @default(false)
+  image          String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  role           String          @default("customer")
+  locale         String          @default("en")
+  currency       String          @default("NOK")
+  phone          String?
+  sessions       Session[]
+  accounts       Account[]
+  orders         Order[]
+  supportThreads SupportThread[]
+  emailLogs      EmailLog[]
+
+  @@unique([email])
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
