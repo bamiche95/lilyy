@@ -95,6 +95,20 @@ function isUniqueViolation(error: unknown): boolean {
   return typeof error === "object" && error !== null && "code" in error && error.code === "P2002";
 }
 
+const MAX_IMAGES = 8;
+
+/** Absolute http(s) URLs only, trimmed, de-duplicated, first eight kept. */
+function normaliseImageUrls(values: unknown): string[] {
+  const list = Array.isArray(values) ? values : [];
+
+  const urls = list
+    .filter((url): url is string => typeof url === "string")
+    .map((url) => url.trim())
+    .filter((url) => /^https?:\/\//i.test(url));
+
+  return [...new Set(urls)].slice(0, MAX_IMAGES);
+}
+
 /** Products feed the shop, home page and admin list — refresh them together. */
 function refreshCatalogue() {
   revalidatePath("/", "layout");
@@ -117,6 +131,13 @@ export async function saveProduct(
 
   const input = parsed.data;
   const slug = slugify(input.slug || input.nameEn) || `product-${Date.now().toString(36)}`;
+
+  /**
+   * The create form stages R2 uploads as hidden `images` fields; the edit form
+   * persists photos on its own, so an absent field must never wipe the list.
+   */
+  const images = normaliseImageUrls(formData.getAll("images"));
+  const imagesProvided = formData.has("images");
 
   const data = {
     slug,
@@ -142,8 +163,11 @@ export async function saveProduct(
 
   try {
     const product = id
-      ? await prisma.product.update({ where: { id }, data })
-      : await prisma.product.create({ data });
+      ? await prisma.product.update({
+          where: { id },
+          data: imagesProvided ? { ...data, images } : data,
+        })
+      : await prisma.product.create({ data: { ...data, images } });
 
     refreshCatalogue();
 
@@ -173,15 +197,7 @@ export async function setProductImages(
     return { ok: false, error: "invalid" };
   }
 
-  const urls = [
-    ...new Set(
-      (Array.isArray(images) ? images : []).filter(
-        (url): url is string => typeof url === "string" && /^https?:\/\//i.test(url.trim()),
-      ),
-    ),
-  ]
-    .slice(0, 8)
-    .map((url) => url.trim());
+  const urls = normaliseImageUrls(images);
 
   try {
     await prisma.product.update({ where: { id: productId }, data: { images: urls } });

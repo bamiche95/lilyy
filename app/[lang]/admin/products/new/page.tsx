@@ -3,8 +3,10 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { ProductForm } from "@/components/admin/ProductForm";
+import { ProductImages } from "@/components/admin/ProductImages";
 import { getDictionary } from "@/lib/dictionaries";
 import { isLocale } from "@/lib/i18n";
+import { isR2Configured } from "@/lib/r2";
 import { requireAdmin } from "@/lib/session";
 
 type PageProps = { params: Promise<{ lang: string }> };
@@ -35,7 +37,18 @@ export default async function NewProductPage({ params }: PageProps) {
 
       <p className="mt-3 max-w-xl text-sm text-mocha">{labels.imagesHint}</p>
 
-      <ProductForm lang={lang} labels={labels} categories={dict.categories} />
+      <ProductForm
+        lang={lang}
+        labels={labels}
+        categories={dict.categories}
+        imagesSlot={
+          <ProductImages
+            initialImages={[]}
+            labels={labels}
+            uploadEnabled={isR2Configured()}
+          />
+        }
+      />
     </section>
   );
 }

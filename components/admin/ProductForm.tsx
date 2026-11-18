@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, type ReactNode } from "react";
 
 import { saveProduct, type ProductActionState } from "@/lib/actions/products";
 import type { Dictionary } from "@/lib/dictionaries";
@@ -116,11 +116,17 @@ export function ProductForm({
   labels,
   categories,
   values,
+  imagesSlot,
 }: {
   lang: "en" | "no";
   labels: Labels;
   categories: Dictionary["categories"];
   values?: ProductFormValues;
+  /**
+   * Rendered inside the form so a staged photo picker can submit its URL list
+   * with the rest of the fields (see the create page).
+   */
+  imagesSlot?: ReactNode;
 }) {
   const router = useRouter();
   const [state, formAction, pending] = useActionState(saveProduct, initialState);
@@ -331,6 +337,8 @@ export function ProductForm({
           </label>
         </div>
       </fieldset>
+
+      {imagesSlot}
 
       <div className="flex flex-wrap items-center gap-3">
         <button type="submit" disabled={pending} className="btn btn-primary disabled:opacity-60">

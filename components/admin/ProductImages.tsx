@@ -10,19 +10,26 @@ type Labels = Dictionary["adminProducts"];
 
 const MAX_IMAGES = 8;
 
+/**
+ * Photo manager. With a `productId` every change is persisted immediately
+ * through a server action. Without one (the create form) the ordered URL list
+ * is staged in hidden `images` inputs and saved together with the product,
+ * while the files themselves still go straight to R2.
+ */
 export function ProductImages({
   productId,
-  slug,
+  slug = "",
   initialImages,
   labels,
   uploadEnabled,
 }: {
-  productId: string;
-  slug: string;
+  productId?: string;
+  slug?: string;
   initialImages: string[];
   labels: Labels;
   uploadEnabled: boolean;
 }) {
+  const staged = !productId;
   const [images, setImages] = useState<string[]>(initialImages);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,10 +37,17 @@ export function ProductImages({
   const fileInput = useRef<HTMLInputElement>(null);
 
   async function persist(next: string[]) {
+    const unique = [...new Set(next)].slice(0, MAX_IMAGES);
+
+    if (!productId) {
+      setImages(unique);
+      return true;
+    }
+
     setBusy(true);
     setError(null);
 
-    const result = await setProductImages(productId, next);
+    const result = await setProductImages(productId, unique);
 
     if (!result.ok || !result.images) {
       setError(labels.uploadFailed);
@@ -46,6 +60,19 @@ export function ProductImages({
     return true;
   }
 
+  /**
+   * R2 key hint. On the create form the slug field is the freshest source and
+   * an empty value is fine — the server falls back to `product-<nonce>`.
+   */
+  function uploadSlug(): string {
+    if (slug.trim()) return slug.trim();
+
+    const form = fileInput.current?.closest("form");
+    const field = form?.querySelector<HTMLInputElement>("#slug, #nameEn");
+
+    return field?.value.trim() ?? "";
+  }
+
   async function upload(file: File) {
     setBusy(true);
     setError(null);
@@ -54,7 +81,7 @@ export function ProductImages({
       const ticketResponse = await fetch("/api/admin/uploads", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slug, contentType: file.type, size: file.size }),
+        body: JSON.stringify({ slug: uploadSlug(), contentType: file.type, size: file.size }),
       });
 
       if (!ticketResponse.ok) throw new Error("ticket");
@@ -72,8 +99,9 @@ export function ProductImages({
       await persist([...images, ticket.publicUrl]);
     } catch {
       setError(labels.uploadFailed);
-      setBusy(false);
     } finally {
+      setBusy(false);
+
       if (fileInput.current) fileInput.current.value = "";
     }
   }
@@ -93,6 +121,12 @@ export function ProductImages({
 
   return (
     <section className="card mt-8 p-5">
+      {staged
+        ? images.map((image, index) => (
+            <input key={`${image}-${index}`} type="hidden" name="images" value={image} />
+          ))
+        : null}
+
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-lg">{labels.images}</h2>
         <p className="text-xs text-mocha">{labels.imagesHint}</p>

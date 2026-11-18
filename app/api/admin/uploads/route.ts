@@ -12,7 +12,11 @@ import {
 import { getSession, isAdmin } from "@/lib/session";
 
 const requestSchema = z.object({
-  slug: z.string().trim().min(1).max(120),
+  /**
+   * Optional: `/admin/products/new` uploads photos before the product (and its
+   * slug) exists, so the key falls back to `product-<nonce>`.
+   */
+  slug: z.string().trim().max(120).optional(),
   contentType: z.enum(ALLOWED_IMAGE_TYPES),
   size: z.number().int().min(1).max(MAX_UPLOAD_BYTES).optional(),
 });
@@ -58,7 +62,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "invalid_request" }, { status: 400 });
   }
 
-  const key = productImageKey(parsed.data.slug, parsed.data.contentType);
+  const key = productImageKey(parsed.data.slug ?? "", parsed.data.contentType);
 
   try {
     const uploadUrl = await createUploadUrl({
