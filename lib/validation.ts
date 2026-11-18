@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import { SUPPORTED_CURRENCIES } from "./currency";
 import { LOCALES } from "./i18n";
+import { ORDER_STATUSES } from "./orders";
 
 export const localeSchema = z.enum(LOCALES);
 export const currencySchema = z.enum(SUPPORTED_CURRENCIES);
@@ -56,19 +57,42 @@ export const checkoutItemSchema = z.object({
   notes: z.string().trim().max(200).optional(),
 });
 
-export const checkoutSchema = z.object({
-  customerName: z.string().trim().min(2).max(80),
-  customerEmail: emailSchema,
-  customerPhone: phoneSchema,
-  fulfilment: z.enum(["DELIVERY", "PICKUP"]).default("DELIVERY"),
-  deliveryAddress: z.string().trim().max(200).optional(),
-  deliveryCity: z.string().trim().max(80).optional(),
-  deliveryPostalCode: z.string().trim().max(20).optional(),
-  deliveryNotes: z.string().trim().max(1000).optional(),
-  preferredDate: z.coerce.date().optional(),
-  items: z.array(checkoutItemSchema).min(1, "Your basket is empty"),
-});
+const blankToUndefined = (value: unknown) =>
+  typeof value === "string" && value.trim() === "" ? undefined : value;
+
+export const checkoutSchema = z
+  .object({
+    customerName: z.string().trim().min(2, "Please tell us your name").max(80),
+    customerEmail: emailSchema,
+    customerPhone: phoneSchema,
+    fulfilment: z.enum(["DELIVERY", "PICKUP"]).default("DELIVERY"),
+    deliveryAddress: z.string().trim().max(200).optional(),
+    deliveryCity: z.string().trim().max(80).optional(),
+    deliveryPostalCode: z.string().trim().max(20).optional(),
+    deliveryNotes: z.string().trim().max(1000).optional(),
+    preferredDate: z.preprocess(blankToUndefined, z.coerce.date().optional()),
+    items: z.array(checkoutItemSchema).min(1, "Your basket is empty").max(40),
+  })
+  .superRefine((value, ctx) => {
+    if (value.fulfilment !== "DELIVERY") return;
+
+    const required: [keyof typeof value, string][] = [
+      ["deliveryAddress", "Add a street address so we can deliver"],
+      ["deliveryCity", "Which city should we deliver to?"],
+      ["deliveryPostalCode", "Add the postal code"],
+    ];
+
+    for (const [key, message] of required) {
+      if (!value[key]) ctx.addIssue({ code: "custom", path: [key], message });
+    }
+  });
 export type CheckoutInput = z.infer<typeof checkoutSchema>;
+
+export const updateOrderStatusSchema = z.object({
+  orderId: z.string().min(1),
+  status: z.enum(ORDER_STATUSES),
+});
+export type UpdateOrderStatusInput = z.infer<typeof updateOrderStatusSchema>;
 
 export const productFilterSchema = z.object({
   category: z

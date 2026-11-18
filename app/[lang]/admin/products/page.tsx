@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { AdminNav } from "@/components/admin/AdminNav";
 import { AvailabilityToggle } from "@/components/admin/AvailabilityToggle";
 import { formatPrice } from "@/lib/currency";
 import { getDictionary } from "@/lib/dictionaries";
@@ -56,6 +57,8 @@ export default async function AdminProductsPage({ params }: PageProps) {
           {labels.new}
         </Link>
       </div>
+
+      <AdminNav lang={lang} current="products" />
 
       <div className="card mt-8 overflow-x-auto">
         <table className="w-full min-w-[40rem] border-collapse text-sm">

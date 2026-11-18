@@ -1,3 +1,5 @@
+import type { OrderStatusValue } from "./orders";
+
 /**
  * Transactional email templates. Inline styles only — mail clients strip
  * stylesheets, and we keep a single shared layout for brand consistency.
@@ -84,6 +86,8 @@ export type OrderEmailData = {
   deliveryAddress?: string;
   pickupLocation?: string;
   items: OrderEmailItem[];
+  /** Public confirmation page for this order, when available. */
+  orderUrl?: string;
   locale?: MailLocale;
 };
 
@@ -100,6 +104,7 @@ const COPY = {
     deliveryTo: "Delivering to",
     collectFrom: "Collection point",
     readyLabel: "Requested date",
+    cta: "View your order",
     closing: "We will email you again the moment your order goes into the oven.",
     signOff: "— The Lilyy Bakers team",
   },
@@ -115,6 +120,7 @@ const COPY = {
     deliveryTo: "Leveres til",
     collectFrom: "Hentested",
     readyLabel: "Ønsket dato",
+    cta: "Se bestillingen",
     closing: "Vi sender deg en ny e-post i det ordren går i ovnen.",
     signOff: "— Lilyy Bakers",
   },
@@ -167,6 +173,7 @@ export function orderConfirmationTemplate(data: OrderEmailData) {
         : ""
     }
     <p style="margin:22px 0 0 0;">${escapeHtml(copy.closing)}</p>
+    ${data.orderUrl ? button(copy.cta, data.orderUrl) : ""}
     <p style="margin:16px 0 0 0;color:${BRAND.muted};">${escapeHtml(copy.signOff)}</p>`;
 
   return {
@@ -189,8 +196,241 @@ export function orderConfirmationTemplate(data: OrderEmailData) {
       "",
       `${copy.totalLabel}: ${data.total}`,
       `${copy.fulfilmentLabel}: ${data.fulfilment === "DELIVERY" ? copy.delivery : copy.pickup}`,
+      data.fulfilment === "DELIVERY"
+        ? data.deliveryAddress
+          ? `${copy.deliveryTo}: ${data.deliveryAddress}`
+          : ""
+        : data.pickupLocation
+          ? `${copy.collectFrom}: ${data.pickupLocation}`
+          : "",
+      data.preferredDate ? `${copy.readyLabel}: ${data.preferredDate}` : "",
+      data.orderUrl ? data.orderUrl : "",
       copy.closing,
-    ].join("\n"),
+    ]
+      .filter((line) => line !== "")
+      .join("\n"),
+  };
+}
+
+export type OrderNotificationData = {
+  orderNumber: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  fulfilment: "DELIVERY" | "PICKUP";
+  preferredDate?: string;
+  deliveryAddress?: string;
+  pickupLocation?: string;
+  deliveryNotes?: string;
+  items: OrderEmailItem[];
+  subtotal: string;
+  deliveryFee: string;
+  total: string;
+  adminUrl: string;
+  locale?: MailLocale;
+};
+
+/** Internal "new order" mail — sent to the bakery inbox, always in English. */
+export function orderNotificationTemplate(data: OrderNotificationData) {
+  const itemName = (item: OrderEmailItem) => (data.locale === "no" ? item.nameNo : item.nameEn);
+
+  const rows = data.items
+    .map(
+      (item) => `<tr>
+        <td style="${cell}">${escapeHtml(itemName(item))} × ${item.quantity}</td>
+        <td style="${cell}text-align:right;white-space:nowrap;">${escapeHtml(item.lineTotal)}</td>
+      </tr>`,
+    )
+    .join("");
+
+  const detail = [
+    ["Customer", data.customerName],
+    ["Email", data.customerEmail],
+    ["Phone", data.customerPhone],
+    ["Fulfilment", data.fulfilment === "DELIVERY" ? "Delivery" : "Collection"],
+    data.preferredDate ? ["Requested date", data.preferredDate] : null,
+    data.fulfilment === "DELIVERY"
+      ? ["Address", data.deliveryAddress ?? "—"]
+      : ["Collection point", data.pickupLocation ?? "—"],
+  ]
+    .filter((entry): entry is [string, string] => Array.isArray(entry))
+    .map(
+      ([label, value]) =>
+        `<tr><td style="padding:4px 12px 4px 0;color:${BRAND.muted};font-size:13px;white-space:nowrap;">${escapeHtml(label)}</td><td style="padding:4px 0;font-size:13px;">${escapeHtml(value)}</td></tr>`,
+    )
+    .join("");
+
+  const body = `
+    <p style="margin:0 0 16px 0;">A new order just came through the shop.</p>
+    <p style="margin:0 0 6px 0;font-family:${SANS};font-size:12px;letter-spacing:1px;text-transform:uppercase;color:${BRAND.muted};">Order</p>
+    <p style="margin:0 0 16px 0;font-size:19px;">${escapeHtml(data.orderNumber)}</p>
+    <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 18px 0;">${detail}</table>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      ${rows}
+      <tr>
+        <td style="${cell}color:${BRAND.muted};">Subtotal</td>
+        <td style="${cell}text-align:right;white-space:nowrap;color:${BRAND.muted};">${escapeHtml(data.subtotal)}</td>
+      </tr>
+      <tr>
+        <td style="${cell}color:${BRAND.muted};">Delivery</td>
+        <td style="${cell}text-align:right;white-space:nowrap;color:${BRAND.muted};">${escapeHtml(data.deliveryFee)}</td>
+      </tr>
+      <tr>
+        <td style="padding:14px 0 0 0;font-size:15px;font-weight:bold;">Total</td>
+        <td style="padding:14px 0 0 0;text-align:right;font-size:15px;font-weight:bold;white-space:nowrap;">${escapeHtml(data.total)}</td>
+      </tr>
+    </table>
+    ${
+      data.deliveryNotes
+        ? `<p style="margin:20px 0 0 0;font-size:13px;"><strong>Notes:</strong> ${escapeHtml(data.deliveryNotes)}</p>`
+        : ""
+    }
+    ${button("Open in the admin panel", data.adminUrl)}`;
+
+  return {
+    subject: `New order ${data.orderNumber} — ${data.total}`,
+    html: renderLayout({
+      preheader: `${data.customerName} · ${data.fulfilment === "DELIVERY" ? "delivery" : "collection"}`,
+      heading: "New order received",
+      body,
+    }),
+    text: [
+      `New order ${data.orderNumber}`,
+      "",
+      `Customer: ${data.customerName}`,
+      `Email: ${data.customerEmail}`,
+      `Phone: ${data.customerPhone}`,
+      `Fulfilment: ${data.fulfilment === "DELIVERY" ? "Delivery" : "Collection"}`,
+      data.preferredDate ? `Requested date: ${data.preferredDate}` : "",
+      data.fulfilment === "DELIVERY"
+        ? `Address: ${data.deliveryAddress ?? "—"}`
+        : `Collection point: ${data.pickupLocation ?? "—"}`,
+      "",
+      ...data.items.map((item) => `${itemName(item)} x${item.quantity} — ${item.lineTotal}`),
+      "",
+      `Subtotal: ${data.subtotal}`,
+      `Delivery: ${data.deliveryFee}`,
+      `Total: ${data.total}`,
+      data.deliveryNotes ? `Notes: ${data.deliveryNotes}` : "",
+      "",
+      data.adminUrl,
+    ]
+      .filter((line) => line !== "")
+      .join("\n"),
+  };
+}
+
+const STATUS_COPY: Record<
+  OrderStatusValue,
+  { en: { label: string; line: string }; no: { label: string; line: string } }
+> = {
+  PENDING: {
+    en: { label: "Order received", line: "We have your order and will confirm it shortly." },
+    no: { label: "Ordre mottatt", line: "Vi har mottatt ordren og bekrefter den snart." },
+  },
+  CONFIRMED: {
+    en: {
+      label: "Order confirmed",
+      line: "We have confirmed your order and reserved time in the bakery.",
+    },
+    no: { label: "Ordre bekreftet", line: "Vi har bekreftet ordren og satt av tid i bakeriet." },
+  },
+  BAKING: {
+    en: { label: "In the oven", line: "Your order is baking right now — the kitchen smells wonderful." },
+    no: { label: "I ovnen", line: "Ordren din står i ovnen nå — det lukter nydelig i bakeriet." },
+  },
+  READY: {
+    en: { label: "Ready", line: "Your order is packed and ready for handover." },
+    no: { label: "Klar", line: "Ordren din er pakket og klar for overlevering." },
+  },
+  OUT_FOR_DELIVERY: {
+    en: { label: "On its way", line: "Our driver has left the bakery with your order." },
+    no: { label: "På vei", line: "Sjåføren vår har forlatt bakeriet med ordren din." },
+  },
+  DELIVERED: {
+    en: { label: "Delivered", line: "Your order has been delivered. We hope every bite is lovely." },
+    no: { label: "Levert", line: "Ordren din er levert. Vi håper hver bit smaker." },
+  },
+  CANCELLED: {
+    en: { label: "Cancelled", line: "We have cancelled this order. If you already paid, a refund follows." },
+    no: { label: "Kansellert", line: "Vi har kansellert ordren. Har du betalt, kommer refusjonen." },
+  },
+  REFUNDED: {
+    en: { label: "Refunded", line: "This order has been refunded to your original payment method." },
+    no: { label: "Refundert", line: "Ordren er refundert til den opprinnelige betalingsmåten din." },
+  },
+};
+
+export type OrderStatusEmailData = {
+  orderNumber: string;
+  customerName: string;
+  status: OrderStatusValue;
+  total: string;
+  fulfilment: "DELIVERY" | "PICKUP";
+  preferredDate?: string;
+  deliveryAddress?: string;
+  pickupLocation?: string;
+  orderUrl: string;
+  locale?: MailLocale;
+};
+
+/** Customer-facing "your order moved" mail for every workflow step. */
+export function orderStatusTemplate(data: OrderStatusEmailData) {
+  const locale = data.locale ?? "en";
+  const isNo = locale === "no";
+  const copy = STATUS_COPY[data.status][locale];
+
+  const labels = {
+    greeting: isNo ? `Hei ${data.customerName},` : `Hi ${data.customerName},`,
+    order: isNo ? "Ordre" : "Order",
+    total: isNo ? "Totalt" : "Total",
+    date: isNo ? "Ønsket dato" : "Requested date",
+    fulfilment: isNo ? "Levering" : "Fulfilment",
+    delivery: isNo ? "Levering" : "Delivery",
+    pickup: isNo ? "Henting" : "Collection",
+    address: data.fulfilment === "DELIVERY" ? (isNo ? "Leveres til" : "Delivering to") : isNo ? "Hentested" : "Collection point",
+    cta: isNo ? "Se bestillingen" : "View your order",
+    help: isNo ? "Svar på denne e-posten hvis du lurer på noe." : "Reply to this email if you have any questions.",
+  };
+
+  const address = data.fulfilment === "DELIVERY" ? data.deliveryAddress : data.pickupLocation;
+
+  const body = `
+    <p style="margin:0 0 14px 0;">${escapeHtml(labels.greeting)}</p>
+    <p style="margin:0 0 18px 0;">${escapeHtml(copy.line)}</p>
+    <p style="margin:0 0 6px 0;font-family:${SANS};font-size:12px;letter-spacing:1px;text-transform:uppercase;color:${BRAND.muted};">${escapeHtml(labels.order)}</p>
+    <p style="margin:0 0 14px 0;font-size:18px;">${escapeHtml(data.orderNumber)}</p>
+    <p style="margin:0 0 4px 0;font-size:14px;"><strong>${escapeHtml(labels.total)}:</strong> ${escapeHtml(data.total)}</p>
+    <p style="margin:0;font-size:14px;"><strong>${escapeHtml(labels.fulfilment)}:</strong> ${escapeHtml(
+      data.fulfilment === "DELIVERY" ? labels.delivery : labels.pickup,
+    )}</p>
+    ${
+      address
+        ? `<p style="margin:4px 0 0 0;color:${BRAND.muted};font-size:13px;">${escapeHtml(labels.address)}: ${escapeHtml(address)}</p>`
+        : ""
+    }
+    ${
+      data.preferredDate
+        ? `<p style="margin:4px 0 0 0;font-size:14px;"><strong>${escapeHtml(labels.date)}:</strong> ${escapeHtml(data.preferredDate)}</p>`
+        : ""
+    }
+    ${button(labels.cta, data.orderUrl)}
+    <p style="margin:0;color:${BRAND.muted};font-size:13px;">${escapeHtml(labels.help)}</p>`;
+
+  return {
+    subject: `${labels.order} ${data.orderNumber} — ${copy.label}`,
+    html: renderLayout({ preheader: copy.line, heading: copy.label, body }),
+    text: [
+      labels.greeting,
+      copy.line,
+      "",
+      `${labels.order}: ${data.orderNumber}`,
+      `${labels.total}: ${data.total}`,
+      data.preferredDate ? `${labels.date}: ${data.preferredDate}` : "",
+      data.orderUrl,
+    ]
+      .filter((line) => line !== "")
+      .join("\n"),
   };
 }
 

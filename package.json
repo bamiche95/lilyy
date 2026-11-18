@@ -17,8 +17,10 @@
     "auth:generate": "dotenv -e .env.local -- npx --yes auth@1.7.25 generate --config lib/auth.ts --output prisma/schema.prisma --adapter prisma --dialect postgresql --yes",
     "icons": "node scripts/generate-icons.mjs",
     "check:cart": "tsx scripts/check-cart.ts",
+    "check:orders": "tsx scripts/check-orders.ts",
     "gate": "dotenv -e .env.local -- node scripts/gate-auth.mjs",
-    "gate:shop": "dotenv -e .env.local -- node scripts/gate-shop.mjs"
+    "gate:shop": "dotenv -e .env.local -- node scripts/gate-shop.mjs",
+    "gate:orders": "dotenv -e .env.local -- node scripts/gate-orders.mjs"
   },
   "prisma": {
     "seed": "dotenv -e .env.local -- tsx prisma/seed.ts"

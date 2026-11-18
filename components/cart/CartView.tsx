@@ -95,7 +95,6 @@ export function CartView({ labels }: { labels: Dictionary["cart"] }) {
                     )}
                   </Link>
 
-
                   <div className="flex flex-1 flex-col gap-2">
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <Link
@@ -171,15 +170,9 @@ export function CartView({ labels }: { labels: Dictionary["cart"] }) {
               </div>
             </dl>
 
-            <button
-              type="button"
-              disabled
-              aria-disabled="true"
-              className="btn btn-primary mt-5 w-full cursor-not-allowed opacity-60"
-            >
+            <Link href={`/${locale}/checkout`} className="btn btn-primary mt-5 w-full">
               {labels.checkout}
-            </button>
-            <p className="mt-2 text-center text-xs text-mocha">{labels.checkoutSoon}</p>
+            </Link>
 
             <div className="mt-5 flex flex-col items-center gap-3">
               <Link href={shopHref(locale)} className="btn btn-outline w-full">
