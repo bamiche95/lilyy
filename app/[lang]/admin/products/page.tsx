@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -82,32 +83,56 @@ export default async function AdminProductsPage({ params }: PageProps) {
             </tr>
           </thead>
           <tbody>
-            {products.map((product) => (
-              <tr key={product.id} className="border-b border-cocoa/5 last:border-0">
-                <td className="p-3">
-                  <p className="font-medium">{localised(lang, product.nameEn, product.nameNo)}</p>
-                  <p className="text-xs text-mocha">{product.slug}</p>
-                </td>
-                <td className="p-3 text-mocha">{dict.categories[product.category]}</td>
-                <td className="p-3 font-medium">{formatPrice(product.price, currency, lang)}</td>
-                <td className="p-3">
-                  <AvailabilityToggle
-                    productId={product.id}
-                    isAvailable={product.isAvailable}
-                    onLabel={labels.isAvailable}
-                    offLabel={labels.archive}
-                  />
-                </td>
-                <td className="p-3">
-                  <Link
-                    href={`/${lang}/admin/products/${product.id}`}
-                    className="underline-offset-2 hover:underline"
-                  >
-                    {labels.edit}
-                  </Link>
-                </td>
-              </tr>
-            ))}
+            {products.map((product) => {
+              const primaryImage = product.images.find((src) => src.trim().length > 0);
+
+              return (
+                <tr key={product.id} className="border-b border-cocoa/5 last:border-0">
+                  <td className="p-3">
+                    <div className="flex items-center gap-3">
+                      {primaryImage ? (
+                        <Image
+                          src={primaryImage}
+                          alt={localised(lang, product.nameEn, product.nameNo)}
+                          width={48}
+                          height={48}
+                          className="h-12 w-12 shrink-0 rounded-lg border border-cocoa/10 object-cover"
+                        />
+                      ) : (
+                        <span
+                          aria-hidden="true"
+                          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg border border-dashed border-cocoa/20 text-center text-[10px] leading-tight text-mocha"
+                        >
+                          {labels.noPhoto}
+                        </span>
+                      )}
+                      <div>
+                        <p className="font-medium">{localised(lang, product.nameEn, product.nameNo)}</p>
+                        <p className="text-xs text-mocha">{product.slug}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="p-3 text-mocha">{dict.categories[product.category]}</td>
+                  <td className="p-3 font-medium">{formatPrice(product.price, currency, lang)}</td>
+                  <td className="p-3">
+                    <AvailabilityToggle
+                      productId={product.id}
+                      isAvailable={product.isAvailable}
+                      onLabel={labels.isAvailable}
+                      offLabel={labels.archive}
+                    />
+                  </td>
+                  <td className="p-3">
+                    <Link
+                      href={`/${lang}/admin/products/${product.id}`}
+                      className="underline-offset-2 hover:underline"
+                    >
+                      {labels.edit}
+                    </Link>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

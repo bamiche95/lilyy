@@ -2,9 +2,12 @@ import type { Metadata, Viewport } from "next";
 import { notFound } from "next/navigation";
 
 import { CartProvider } from "@/components/cart/CartProvider";
+import { MobileMenuSheet } from "@/components/layout/MobileMenu";
+import { MobileMenuProvider } from "@/components/layout/MobileMenuProvider";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import { I18nProvider } from "@/components/providers/I18nProvider";
+import { MobileTabBar } from "@/components/pwa/MobileTabBar";
 import { ServiceWorkerRegister } from "@/components/pwa/ServiceWorkerRegister";
 import { getCurrencyRates } from "@/lib/currency";
 import { getDictionary } from "@/lib/dictionaries";
@@ -21,6 +24,9 @@ type RootLayoutProps = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  // Edge-to-edge inside the installed PWA; the tab bar and header pad
+  // themselves with env(safe-area-inset-*).
+  viewportFit: "cover",
   themeColor: "#fbf7ef",
 };
 
@@ -47,6 +53,13 @@ export async function generateMetadata({
     },
     description: dict.meta.description,
     manifest: "/manifest.webmanifest",
+    icons: { apple: "/icons/apple-touch-icon.png" },
+    appleWebApp: {
+      capable: true,
+      title: dict.meta.siteName,
+      statusBarStyle: "default",
+    },
+    formatDetection: { telephone: false },
     alternates: {
       canonical: `/${lang}`,
       languages: { en: "/en", no: "/no" },
@@ -74,24 +87,66 @@ export default async function RootLayout({ children, params }: RootLayoutProps) 
 
   return (
     <html lang={LOCALE_META[lang].htmlLang} className="h-full">
-      <body className="flex min-h-full flex-col bg-cream text-cocoa antialiased">
+      <body className="flex min-h-full flex-col bg-cream pb-[calc(5.5rem+env(safe-area-inset-bottom))] text-cocoa antialiased md:pb-0">
         <I18nProvider locale={lang} currency={currency} rates={getCurrencyRates()}>
           <CartProvider>
-            <a
-              href="#main-content"
-              className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-full focus:bg-cocoa focus:px-4 focus:py-2 focus:text-sm focus:text-cream"
-            >
-              {lang === "no" ? "Hopp til innhold" : "Skip to content"}
-            </a>
+            <MobileMenuProvider>
+              <a
+                href="#main-content"
+                className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-full focus:bg-cocoa focus:px-4 focus:py-2 focus:text-sm focus:text-cream"
+              >
+                {lang === "no" ? "Hopp til innhold" : "Skip to content"}
+              </a>
 
-            <SiteHeader lang={lang} dict={dict} currency={currency} />
+              <SiteHeader lang={lang} dict={dict} currency={currency} />
 
-            <main id="main-content" className="flex-1">
-              {children}
-            </main>
+              <main id="main-content" className="flex-1">
+                {children}
+              </main>
 
-            <SiteFooter lang={lang} dict={dict} />
-            <ServiceWorkerRegister />
+              <SiteFooter lang={lang} dict={dict} />
+
+              <MobileMenuSheet
+                lang={lang}
+                currency={currency}
+                labels={{
+                  title: dict.nav.menu,
+                  close: dict.common.close,
+                  tagline: dict.meta.tagline,
+                  home: dict.nav.home,
+                  shop: dict.nav.shop,
+                  basket: dict.nav.basket,
+                  signIn: dict.nav.signIn,
+                  signUp: dict.nav.signUp,
+                  signOut: dict.nav.signOut,
+                  account: dict.nav.account,
+                  admin: dict.nav.admin,
+                  preferences: dict.nav.preferences,
+                  language: dict.common.language,
+                  currency: dict.common.currency,
+                  error: dict.auth.genericError,
+                }}
+              />
+
+              <MobileTabBar
+                lang={lang}
+                labels={{
+                  menu: dict.nav.menu,
+                  home: dict.nav.home,
+                  shop: dict.nav.shop,
+                  basket: dict.nav.basket,
+                  admin: {
+                    overview: dict.adminOverview.title,
+                    products: dict.adminProducts.title,
+                    orders: dict.adminOrders.title,
+                    users: dict.adminUsers.title,
+                    email: dict.adminEmail.title,
+                  },
+                }}
+              />
+
+              <ServiceWorkerRegister />
+            </MobileMenuProvider>
           </CartProvider>
         </I18nProvider>
       </body>

@@ -1,0 +1,105 @@
+name: DevSecOps Security Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  code-and-secrets-scan:
+    name: Secrets, SAST & Dependency Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Secret Scanning (Gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: SAST Static Code Analysis (Semgrep)
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: p/owasp-top-ten
+
+      - name: Dependency Vulnerability Scan (Trivy SCA)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          severity: 'HIGH,CRITICAL'
+          # Only fail on findings we can actually act on; unfixable advisories
+          # would otherwise wedge the pipeline. Deliberate suppressions live in
+          # .trivyignore.yaml (each one carries a reason and an expiry date).
+          ignore-unfixed: true
+          # Point Trivy at the documented suppressions explicitly. Keep this the
+          # only ignore file in the repo: Trivy errors out when an explicit
+          # ignore file coexists with an implicit .trivyignore in the scan root,
+          # so a stray .trivyignore would break the gate.
+          trivyignores: '.trivyignore.yaml'
+          exit-code: '1'
+
+  container-and-iac-scan:
+    name: Container Hardening & IaC Audit
+    runs-on: ubuntu-latest
+    # `next build` prerenders the Prisma-backed pages, so the image build needs a
+    # reachable database. This throwaway instance only exists for the build.
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: app
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d app"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # One throwaway server, two spellings: migrations run on the runner
+      # (`localhost`), while `docker build` reaches the same published port via
+      # the host gateway (see --add-host below).
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/app
+      DIRECT_URL: postgresql://postgres:postgres@localhost:5432/app
+      BUILD_DATABASE_URL: postgresql://postgres:postgres@host.docker.internal:5432/app
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js (for schema migration)
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Provision build database schema
+        run: npx prisma migrate deploy
+
+      - name: Build Production Docker Image
+        run: >
+          docker build
+          --add-host host.docker.internal:host-gateway
+          --build-arg DATABASE_URL="$BUILD_DATABASE_URL"
+          --build-arg DIRECT_URL="$BUILD_DATABASE_URL"
+          -t app-security-check:${{ github.sha }} .
+
+      - name: Scan Container Image for CVEs (Trivy)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: 'app-security-check:${{ github.sha }}'
+          severity: 'CRITICAL'
+          exit-code: '1'

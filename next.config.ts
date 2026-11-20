@@ -24,6 +24,28 @@ const nextConfig: NextConfig = {
 
   // nodemailer uses dynamic requires that must not be bundled.
   serverExternalPackages: ["nodemailer"],
+
+  /**
+   * The service worker must never be served stale, and it needs to answer for
+   * the whole origin (`Service-Worker-Allowed`), not just `/`. The manifest is
+   * revalidated so an installed app picks up icon/shortcut changes.
+   */
+  async headers() {
+    return [
+      {
+        source: "/sw.js",
+        headers: [
+          { key: "Content-Type", value: "application/javascript; charset=utf-8" },
+          { key: "Cache-Control", value: "no-cache, no-store, must-revalidate" },
+          { key: "Service-Worker-Allowed", value: "/" },
+        ],
+      },
+      {
+        source: "/manifest.webmanifest",
+        headers: [{ key: "Cache-Control", value: "public, max-age=0, must-revalidate" }],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

@@ -3,9 +3,15 @@
    - immutable build assets: cache first
    - everything else (API, auth) is left untouched
 */
-const VERSION = "lilyy-v1";
+const VERSION = "lilyy-v2";
 const STATIC_CACHE = `${VERSION}-static`;
-const PRECACHE = ["/offline.html", "/icons/icon-192.png"];
+const PRECACHE = [
+  "/offline.html",
+  "/icons/icon-192.png",
+  "/icons/icon-512.png",
+  "/icons/maskable-512.png",
+  "/icons/apple-touch-icon.png",
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
