@@ -1,0 +1,25 @@
+# Build context for the production image. Everything the build does not need is
+# excluded so the context stays small and no local state leaks into a layer.
+# Secrets are injected as build args / runtime env, never copied from disk.
+
+node_modules
+.next
+out
+build
+coverage
+
+.git
+.github
+.neon
+CLAUDE.md
+AGENTS.md
+README.md
+
+# Local secrets must never enter the image; .env.example stays for reference.
+.env
+.env.*
+!.env.example
+
+*.tsbuildinfo
+npm-debug.log*
+.DS_Store

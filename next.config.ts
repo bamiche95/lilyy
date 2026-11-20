@@ -5,6 +5,13 @@ const r2PublicUrl = process.env.R2_PUBLIC_URL ?? "https://pub-df5a7ed06237401ca5
 const nextConfig: NextConfig = {
   poweredByHeader: false,
 
+  /**
+   * The container image (see `Dockerfile`) ships the traced standalone server
+   * instead of a full `node_modules` tree. Has no effect on `next dev` or on
+   * platform builds such as Vercel.
+   */
+  output: "standalone",
+
   images: {
     qualities: [75, 90],
     formats: ["image/avif", "image/webp"],

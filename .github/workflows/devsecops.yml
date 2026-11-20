@@ -2,13 +2,18 @@ name: DevSecOps Security Pipeline
 
 on:
   push:
-    branches: [ main ]
+    # This repository's default branch is `master`, so watching `main` alone
+    # meant the pipeline never fired. `main` stays listed for a future rename.
+    branches: [ master, main ]
   pull_request:
-    branches: [ main ]
+    branches: [ master, main ]
+  # Lets the pipeline be started on demand from the Actions tab, with
+  # `gh workflow run devsecops.yml --ref master`, or via the REST API.
+  workflow_dispatch:
 
 permissions:
   contents: read
-  security-events: write
+  security-events: write  # code scanning SARIF upload
 
 jobs:
   code-and-secrets-scan:
@@ -25,10 +30,30 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      # `returntocorp/semgrep-action` is archived, and it uploads SARIF itself,
+      # which needs GitHub Advanced Security on a private repository. Running the
+      # official image keeps the rules current and keeps the gate local: the
+      # scan exits 1 on ERROR-severity findings, the upload is best-effort.
       - name: SAST Static Code Analysis (Semgrep)
-        uses: returntocorp/semgrep-action@v1
+        run: |
+          docker run --rm \
+            --volume "$PWD:/src" \
+            --workdir /src \
+            --entrypoint semgrep \
+            semgrep/semgrep:latest \
+            scan \
+              --config p/owasp-top-ten \
+              --severity ERROR \
+              --error \
+              --sarif --output semgrep.sarif
+
+      - name: Upload SAST results to code scanning
+        if: always()
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@v3
         with:
-          config: p/owasp-top-ten
+          sarif_file: semgrep.sarif
+          category: semgrep
 
       - name: Dependency Vulnerability Scan (Trivy SCA)
         uses: aquasecurity/trivy-action@v0.36.0
@@ -46,6 +71,18 @@ jobs:
           # so a stray .trivyignore would break the gate.
           trivyignores: '.trivyignore.yaml'
           exit-code: '1'
+          # SARIF is produced alongside the console report so findings land in the
+          # Security tab; the exit code above stays the actual gate.
+          format: 'sarif'
+          output: 'trivy-fs.sarif'
+
+      - name: Upload dependency scan results to code scanning
+        if: always()
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-fs.sarif
+          category: trivy-fs
 
   container-and-iac-scan:
     name: Container Hardening & IaC Audit
@@ -70,8 +107,12 @@ jobs:
       # One throwaway server, two spellings: migrations run on the runner
       # (`localhost`), while `docker build` reaches the same published port via
       # the host gateway (see --add-host below).
+      #
+      # The name must be DATABASE_URL_UNPOOLED, not DIRECT_URL: prisma/schema.prisma
+      # declares `directUrl = env("DATABASE_URL_UNPOOLED")`, so `prisma migrate
+      # deploy` aborts without it.
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/app
-      DIRECT_URL: postgresql://postgres:postgres@localhost:5432/app
+      DATABASE_URL_UNPOOLED: postgresql://postgres:postgres@localhost:5432/app
       BUILD_DATABASE_URL: postgresql://postgres:postgres@host.docker.internal:5432/app
     steps:
       - name: Checkout repository
@@ -94,7 +135,7 @@ jobs:
           docker build
           --add-host host.docker.internal:host-gateway
           --build-arg DATABASE_URL="$BUILD_DATABASE_URL"
-          --build-arg DIRECT_URL="$BUILD_DATABASE_URL"
+          --build-arg DATABASE_URL_UNPOOLED="$BUILD_DATABASE_URL"
           -t app-security-check:${{ github.sha }} .
 
       - name: Scan Container Image for CVEs (Trivy)
@@ -103,3 +144,13 @@ jobs:
           image-ref: 'app-security-check:${{ github.sha }}'
           severity: 'CRITICAL'
           exit-code: '1'
+          format: 'sarif'
+          output: 'trivy-image.sarif'
+
+      - name: Upload container scan results to code scanning
+        if: always()
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: trivy-image.sarif
+          category: trivy-image

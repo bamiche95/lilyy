@@ -1,0 +1,30 @@
+# Trivy suppression file referenced explicitly by
+# .github/workflows/devsecops.yml (`trivyignores: '.trivyignore.yaml'`).
+#
+# Keep this the ONLY ignore file in the repo. Trivy refuses to run when an
+# explicit ignore file coexists with an implicit `.trivyignore` in the scan
+# root, so adding a stray `.trivyignore` breaks the gate.
+#
+# Every entry is a reviewed, temporary decision and must carry all three fields:
+#
+#   vulnerabilities:
+#     - id: CVE-2024-00000          # finding ID (license name for licenses)
+#       paths:                       # optional; omit to suppress everywhere
+#         - "package-lock.json"
+#       statement: >-                # why the risk is accepted, and who owns it
+#         Only reachable from the dev-only test runner; no fixed release yet.
+#       expired_at: 2026-12-31       # ISO date; after this the finding returns
+#
+#   misconfigurations:
+#     - id: AVD-DS-0001
+#       paths:
+#         - "Dockerfile"
+#       statement: The runtime user is set to non-root in the final stage.
+#       expired_at: 2026-12-31
+#
+# No suppressions are currently required: `ignore-unfixed: true` in the workflow
+# already skips advisories with no available fix.
+
+vulnerabilities: []
+misconfigurations: []
+licenses: []
