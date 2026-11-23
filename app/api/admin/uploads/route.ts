@@ -4,6 +4,8 @@ import { z } from "zod";
 import {
   ALLOWED_IMAGE_TYPES,
   MAX_UPLOAD_BYTES,
+  categoryImageKey,
+  contentImageKey,
   createUploadUrl,
   isR2Configured,
   productImageKey,
@@ -12,6 +14,11 @@ import {
 import { getSession, isAdmin } from "@/lib/session";
 
 const requestSchema = z.object({
+  /**
+   * Which admin form is uploading. Defaults to `product` so an older client
+   * keeps working; categories and site content get their own key prefixes.
+   */
+  kind: z.enum(["product", "category", "content"]).default("product"),
   /**
    * Optional: `/admin/products/new` uploads photos before the product (and its
    * slug) exists, so the key falls back to `product-<nonce>`.
@@ -62,7 +69,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "invalid_request" }, { status: 400 });
   }
 
-  const key = productImageKey(parsed.data.slug ?? "", parsed.data.contentType);
+  const key =
+    parsed.data.kind === "category"
+      ? categoryImageKey(parsed.data.slug ?? "", parsed.data.contentType)
+      : parsed.data.kind === "content"
+        ? contentImageKey(parsed.data.slug ?? "", parsed.data.contentType)
+        : productImageKey(parsed.data.slug ?? "", parsed.data.contentType);
 
   try {
     const uploadUrl = await createUploadUrl({

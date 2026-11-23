@@ -5,13 +5,12 @@ import { bodyFont, displayFont } from "@/app/fonts";
 import { CartProvider } from "@/components/cart/CartProvider";
 import { MobileMenuSheet } from "@/components/layout/MobileMenu";
 import { MobileMenuProvider } from "@/components/layout/MobileMenuProvider";
-import { SiteFooter } from "@/components/layout/SiteFooter";
-import { SiteHeader } from "@/components/layout/SiteHeader";
 import { I18nProvider } from "@/components/providers/I18nProvider";
 import { MobileTabBar } from "@/components/pwa/MobileTabBar";
 import { ServiceWorkerRegister } from "@/components/pwa/ServiceWorkerRegister";
 import { getCurrencyRates } from "@/lib/currency";
 import { getCategories } from "@/lib/categories";
+import { getSiteContent } from "@/lib/content";
 import { getDictionary } from "@/lib/dictionaries";
 import { LOCALE_META, isLocale } from "@/lib/i18n";
 import { getRequestCurrency } from "@/lib/request";
@@ -43,22 +42,28 @@ export async function generateMetadata({
     return { title: "Lilyy Bakers" };
   }
 
-  const dict = await getDictionary(lang);
+  const [dict, content] = await Promise.all([getDictionary(lang), getSiteContent(lang)]);
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+
+  // The admin can rewrite the brand block, so the tab title, description and
+  // social preview all follow the same curated copy as the page itself.
+  const siteName = content["brand.name"].trim() || dict.meta.siteName;
+  const tagline = content["brand.tagline"].trim() || dict.meta.tagline;
+  const description = content["brand.description"].trim() || dict.meta.description;
 
   return {
     metadataBase: new URL(siteUrl),
-    applicationName: dict.meta.siteName,
+    applicationName: siteName,
     title: {
-      default: `${dict.meta.siteName} — ${dict.meta.tagline}`,
-      template: `%s | ${dict.meta.siteName}`,
+      default: `${siteName} — ${tagline}`,
+      template: `%s | ${siteName}`,
     },
-    description: dict.meta.description,
+    description,
     manifest: "/manifest.webmanifest",
     icons: { apple: "/icons/apple-touch-icon.png" },
     appleWebApp: {
       capable: true,
-      title: dict.meta.siteName,
+      title: siteName,
       statusBarStyle: "default",
     },
     formatDetection: { telephone: false },
@@ -68,9 +73,9 @@ export async function generateMetadata({
     },
     openGraph: {
       type: "website",
-      siteName: dict.meta.siteName,
-      title: `${dict.meta.siteName} — ${dict.meta.tagline}`,
-      description: dict.meta.description,
+      siteName,
+      title: `${siteName} — ${tagline}`,
+      description,
       locale: lang === "no" ? "nb_NO" : "en_GB",
       url: `/${lang}`,
     },
@@ -100,20 +105,10 @@ export default async function RootLayout({ children, params }: RootLayoutProps) 
         <I18nProvider locale={lang} currency={currency} rates={getCurrencyRates()}>
           <CartProvider>
             <MobileMenuProvider>
-              <a
-                href="#main-content"
-                className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-full focus:bg-cocoa focus:px-4 focus:py-2 focus:text-sm focus:text-cream"
-              >
-                {lang === "no" ? "Hopp til innhold" : "Skip to content"}
-              </a>
-
-              <SiteHeader lang={lang} dict={dict} currency={currency} categories={categories} />
-
-              <main id="main-content" className="flex-1">
-                {children}
-              </main>
-
-              <SiteFooter lang={lang} dict={dict} />
+              {/* Each area brings its own chrome: `(site)` renders the storefront
+                  header/footer, `admin` the dashboard shell. The proxy, the mobile
+                  menu sheet and the tab bar stay here because both share them. */}
+              {children}
 
               <MobileMenuSheet
                 lang={lang}

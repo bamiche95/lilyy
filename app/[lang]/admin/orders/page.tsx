@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { AdminNav } from "@/components/admin/AdminNav";
 import { OrderStatusBadge } from "@/components/orders/OrderStatusBadge";
 import { DEFAULT_CURRENCY, formatPrice, isCurrency } from "@/lib/currency";
 import { getDictionary } from "@/lib/dictionaries";
@@ -59,7 +58,7 @@ export default async function AdminOrdersPage({ params, searchParams }: PageProp
   const labels = dict.adminOrders;
 
   return (
-    <section className="container-page py-10 sm:py-14">
+    <section>
       <div>
         <p className="eyebrow">{labels.title}</p>
         <h1 className="mt-2 text-3xl">{labels.subtitle}</h1>
@@ -67,8 +66,6 @@ export default async function AdminOrdersPage({ params, searchParams }: PageProp
           {orders.length} {orders.length === 1 ? dict.cart.itemOne : dict.cart.itemMany}
         </p>
       </div>
-
-      <AdminNav lang={lang} current="orders" />
 
       <nav aria-label={labels.filter} className="mt-6 flex flex-wrap gap-2 text-xs">
         <Link

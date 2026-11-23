@@ -78,11 +78,47 @@ function extensionFor(contentType: string, fallback = "jpg"): string {
   }
 }
 
+function imageKey(
+  folder: string,
+  fallback: string,
+  slug: string,
+  contentType: string,
+  nonce: number,
+): string {
+  const year = new Date().getFullYear();
+  const safeSlug = slug.replace(/[^a-z0-9-]/gi, "").toLowerCase() || fallback;
+  return `${folder}/${year}/${safeSlug}-${nonce.toString(36)}.${extensionFor(contentType)}`;
+}
+
 /** `products/2026/surdeigsbrod-m1x2n3.jpg` */
 export function productImageKey(slug: string, contentType: string, nonce = Date.now()): string {
-  const year = new Date().getFullYear();
-  const safeSlug = slug.replace(/[^a-z0-9-]/gi, "").toLowerCase() || "product";
-  return `products/${year}/${safeSlug}-${nonce.toString(36)}.${extensionFor(contentType)}`;
+  return imageKey("products", "product", slug, contentType, nonce);
+}
+
+/** `categories/2026/pies-m1x2n3.jpg` */
+export function categoryImageKey(slug: string, contentType: string, nonce = Date.now()): string {
+  return imageKey("categories", "category", slug, contentType, nonce);
+}
+
+/** `content/2026/heroimageprimary-m1x2n3.jpg` */
+export function contentImageKey(slug: string, contentType: string, nonce = Date.now()): string {
+  return imageKey("content", "content", slug, contentType, nonce);
+}
+
+/**
+ * Inverse of `publicObjectUrl`, used when a replaced photo should be removed
+ * from the bucket. Returns null for anything we did not upload ourselves, so a
+ * URL pasted into the admin form can never delete someone else's asset.
+ */
+export function keyFromPublicUrl(url: string): string | null {
+  if (!isR2Configured()) return null;
+
+  const base = serverEnv().R2_PUBLIC_URL.replace(/\/+$/, "");
+
+  if (!url.startsWith(`${base}/`)) return null;
+
+  const key = url.slice(base.length + 1).split(/[?#]/)[0];
+  return key.length > 0 ? key : null;
 }
 
 /** Browser uploads directly to R2 with this short-lived PUT URL. */

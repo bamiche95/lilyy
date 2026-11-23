@@ -1,39 +1,80 @@
 import Link from "next/link";
 
+import type { SiteContent } from "@/lib/content-fields";
 import type { Dictionary } from "@/lib/dictionaries";
 import type { Locale } from "@/lib/i18n";
 
-export function SiteFooter({ lang, dict }: { lang: Locale; dict: Dictionary }) {
+/**
+ * The footer reads the admin-curated content: business name, about paragraph
+ * and contact rows. A blank field hides its row, so the bakery can publish a
+ * phone number only once there is one to publish.
+ */
+export function SiteFooter({
+  lang,
+  dict,
+  content,
+}: {
+  lang: Locale;
+  dict: Dictionary;
+  content: SiteContent;
+}) {
   const year = new Date().getFullYear();
+
+  const businessName = content["brand.name"].trim() || dict.footer.aboutTitle;
+  const about = content["footer.about"].trim();
+  const ordersEmail = content["contact.emailOrders"].trim();
+  const supportEmail = content["contact.emailSupport"].trim();
+  const phone = content["contact.phone"].trim();
+  const address = content["contact.address"].trim();
+  const hours = content["contact.hours"].trim();
+
+  const hasContact = Boolean(ordersEmail || supportEmail || phone || address || hours);
 
   return (
     <footer className="border-t border-cocoa/10 bg-cocoa text-cream">
       <div className="container-page grid gap-10 py-14 sm:grid-cols-3">
         <div>
-          <p className="font-serif text-lg">{dict.footer.aboutTitle}</p>
-          <p className="mt-3 max-w-xs text-sm leading-relaxed text-cream/70">
-            {dict.footer.aboutBody}
-          </p>
+          <p className="font-serif text-lg">{businessName}</p>
+          {about ? (
+            <p className="mt-3 max-w-xs text-sm leading-relaxed text-cream/70">{about}</p>
+          ) : null}
         </div>
 
-        <div>
-          <p className="text-[11px] uppercase tracking-[0.25em] text-cream/50">
-            {dict.footer.contactTitle}
-          </p>
-          <ul className="mt-3 space-y-2 text-sm text-cream/80">
-            <li>
-              <a className="transition hover:text-gold" href="mailto:orders@lilyybakers.com">
-                orders@lilyybakers.com
-              </a>
-            </li>
-            <li>
-              <a className="transition hover:text-gold" href="mailto:contact@lilyybakers.com">
-                contact@lilyybakers.com
-              </a>
-            </li>
-            <li className="text-cream/60">{dict.footer.openingHours}</li>
-          </ul>
-        </div>
+        {hasContact ? (
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.25em] text-cream/50">
+              {dict.footer.contactTitle}
+            </p>
+            <ul className="mt-3 space-y-2 text-sm text-cream/80">
+              {ordersEmail ? (
+                <li>
+                  <a className="transition hover:text-gold" href={`mailto:${ordersEmail}`}>
+                    {ordersEmail}
+                  </a>
+                </li>
+              ) : null}
+              {supportEmail ? (
+                <li>
+                  <a className="transition hover:text-gold" href={`mailto:${supportEmail}`}>
+                    {supportEmail}
+                  </a>
+                </li>
+              ) : null}
+              {phone ? (
+                <li>
+                  <a
+                    className="transition hover:text-gold"
+                    href={`tel:${phone.replace(/[^\d+]/g, "")}`}
+                  >
+                    {phone}
+                  </a>
+                </li>
+              ) : null}
+              {address ? <li className="text-cream/60">{address}</li> : null}
+              {hours ? <li className="text-cream/60">{hours}</li> : null}
+            </ul>
+          </div>
+        ) : null}
 
         <div>
           <p className="text-[11px] uppercase tracking-[0.25em] text-cream/50">
@@ -57,7 +98,7 @@ export function SiteFooter({ lang, dict }: { lang: Locale; dict: Dictionary }) {
       <div className="border-t border-cream/10">
         <div className="container-page flex flex-col gap-2 py-6 text-xs text-cream/50 sm:flex-row sm:items-center sm:justify-between">
           <p>
-            © {year} Lilyy Bakers. {dict.footer.rights}
+            © {year} {businessName}. {dict.footer.rights}
           </p>
           <p>{dict.footer.privacy} · {dict.footer.terms}</p>
         </div>

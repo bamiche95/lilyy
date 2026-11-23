@@ -25,7 +25,7 @@ export default async function NewProductPage({ params }: PageProps) {
   const labels = dict.adminProducts;
 
   return (
-    <section className="container-page py-10 sm:py-14">
+    <section>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="eyebrow">{labels.title}</p>

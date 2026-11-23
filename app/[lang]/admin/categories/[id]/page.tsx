@@ -7,6 +7,7 @@ import { DeleteCategoryButton } from "@/components/admin/DeleteCategoryButton";
 import { getDictionary } from "@/lib/dictionaries";
 import { isLocale } from "@/lib/i18n";
 import { prisma } from "@/lib/prisma";
+import { isR2Configured } from "@/lib/r2";
 import { requireAdmin } from "@/lib/session";
 import { shopHref } from "@/lib/shop";
 
@@ -29,7 +30,7 @@ export default async function EditCategoryPage({ params }: PageProps) {
   const labels = dict.adminCategories;
 
   return (
-    <section className="container-page py-10 sm:py-14">
+    <section>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="eyebrow">{labels.title}</p>
@@ -48,8 +49,10 @@ export default async function EditCategoryPage({ params }: PageProps) {
           slug: category.slug,
           nameEn: category.nameEn,
           nameNo: category.nameNo,
+          image: category.image,
           sortOrder: String(category.sortOrder),
         }}
+        uploadEnabled={isR2Configured()}
       />
 
       <div className="mt-8 border-t border-cocoa/10 pt-6">

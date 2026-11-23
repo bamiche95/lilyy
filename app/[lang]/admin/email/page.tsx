@@ -4,7 +4,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { AdminNav } from "@/components/admin/AdminNav";
 import { EmailStatusBadge } from "@/components/admin/EmailStatusBadge";
 import { getDictionary } from "@/lib/dictionaries";
 import { isLocale } from "@/lib/i18n";
@@ -79,13 +78,11 @@ export default async function AdminEmailPage({ params, searchParams }: PageProps
   };
 
   return (
-    <section className="container-page py-10 sm:py-14">
+    <section>
       <div>
         <p className="eyebrow">{labels.title}</p>
         <h1 className="mt-2 text-3xl">{labels.subtitle}</h1>
       </div>
-
-      <AdminNav lang={lang} current="email" />
 
       <div className="mt-6">
         <h2 className="text-lg">{labels.templatesTitle}</h2>

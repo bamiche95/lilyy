@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { CategoryForm } from "@/components/admin/CategoryForm";
 import { getDictionary } from "@/lib/dictionaries";
 import { isLocale } from "@/lib/i18n";
+import { isR2Configured } from "@/lib/r2";
 import { requireAdmin } from "@/lib/session";
 
 type PageProps = { params: Promise<{ lang: string }> };
@@ -22,7 +23,7 @@ export default async function NewCategoryPage({ params }: PageProps) {
   const labels = dict.adminCategories;
 
   return (
-    <section className="container-page py-10 sm:py-14">
+    <section>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="eyebrow">{labels.title}</p>
@@ -33,7 +34,7 @@ export default async function NewCategoryPage({ params }: PageProps) {
         </Link>
       </div>
 
-      <CategoryForm lang={lang} labels={labels} />
+      <CategoryForm lang={lang} labels={labels} uploadEnabled={isR2Configured()} />
     </section>
   );
 }

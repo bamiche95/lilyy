@@ -10,6 +10,8 @@ export type ShopCategory = {
   slug: string;
   nameEn: string;
   nameNo: string;
+  /** Home page card photo; `null` falls back to an illustrated tile. */
+  image: string | null;
   sortOrder: number;
 };
 

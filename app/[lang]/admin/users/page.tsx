@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { AdminNav } from "@/components/admin/AdminNav";
 import { UserRoleForm } from "@/components/admin/UserRoleForm";
 import { getDictionary } from "@/lib/dictionaries";
 import { isLocale, LOCALE_META } from "@/lib/i18n";
@@ -76,7 +75,7 @@ export default async function AdminUsersPage({ params, searchParams }: PageProps
   ];
 
   return (
-    <section className="container-page py-10 sm:py-14">
+    <section>
       <div>
         <p className="eyebrow">{labels.title}</p>
         <h1 className="mt-2 text-3xl">{labels.subtitle}</h1>
@@ -84,8 +83,6 @@ export default async function AdminUsersPage({ params, searchParams }: PageProps
           {users.length} {users.length === 1 ? dict.shop.resultsOne : dict.shop.resultsMany}
         </p>
       </div>
-
-      <AdminNav lang={lang} current="users" />
 
       <div className="mt-6 flex flex-wrap items-center gap-3">
         <nav aria-label={labels.filter} className="flex flex-wrap gap-2 text-xs">

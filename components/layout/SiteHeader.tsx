@@ -19,11 +19,16 @@ export function SiteHeader({
   dict,
   currency,
   categories,
+  logoSrc,
+  brandName,
 }: {
   lang: Locale;
   dict: Dictionary;
   currency: Currency;
   categories: ShopCategory[];
+  /** Admin-uploaded logo; `null` keeps the bundled lockup. */
+  logoSrc: string | null;
+  brandName: string;
 }) {
   // One bar, three slots: the lockup, the shop sections, then the account
   // cluster. The bar is cocoa so the white lockup reads at full contrast; every
@@ -37,7 +42,7 @@ export function SiteHeader({
         <div className="flex min-w-0 flex-1 items-center">
           {/* The lockup carries its own tagline, so the header no longer repeats
               one; the localised tagline still appears in metadata and the hero. */}
-          <SiteLogo lang={lang} loading="eager" />
+          <SiteLogo lang={lang} logoSrc={logoSrc} alt={brandName} loading="eager" />
         </div>
 
         <div className="hidden min-w-0 items-center md:flex">

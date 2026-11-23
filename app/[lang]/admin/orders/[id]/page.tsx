@@ -42,7 +42,7 @@ export default async function AdminOrderDetailPage({ params }: PageProps) {
     .join(", ");
 
   return (
-    <section className="container-page py-10 sm:py-14">
+    <section>
       <Link
         href={`/${lang}/admin/orders`}
         className="text-xs text-mocha underline-offset-2 hover:text-berry hover:underline"

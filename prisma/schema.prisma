@@ -82,6 +82,8 @@ model Category {
   slug      String   @unique
   nameEn    String
   nameNo    String
+  /// Public URL of the photo shown on the home page category cards.
+  image     String?
   sortOrder Int      @default(0)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -256,6 +258,24 @@ model EmailLog {
   @@index([to])
   @@index([userId])
   @@map("email_logs")
+}
+
+// ---------------------------------------------------------------------------
+// Editable site content
+// ---------------------------------------------------------------------------
+
+/// Marketing copy, photos and contact details curated in the admin area.
+/// The dictionaries supply the built-in defaults, so an empty table renders
+/// the site exactly as it shipped; a row here overrides one field for one
+/// language (`locale = "*"` means language-neutral: photos, e-mails, phone).
+model SiteContent {
+  key       String
+  locale    String
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt
+
+  @@id([key, locale])
+  @@map("site_content")
 }
 
 model User {

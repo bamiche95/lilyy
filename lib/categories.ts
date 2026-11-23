@@ -17,7 +17,7 @@ export type { ShopCategory };
 export const getCategories = cache(async (): Promise<ShopCategory[]> => {
   return prisma.category.findMany({
     orderBy: [{ sortOrder: "asc" }, { nameEn: "asc" }],
-    select: { id: true, slug: true, nameEn: true, nameNo: true, sortOrder: true },
+    select: { id: true, slug: true, nameEn: true, nameNo: true, image: true, sortOrder: true },
   });
 });
 

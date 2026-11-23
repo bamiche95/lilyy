@@ -4,9 +4,10 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
+import { deleteObject, isR2Configured, keyFromPublicUrl } from "@/lib/r2";
 import { requireAdmin } from "@/lib/session";
 import { slugify } from "@/lib/utils";
-import { fieldErrors } from "@/lib/validation";
+import { fieldErrors, optionalImageUrlSchema } from "@/lib/validation";
 
 export type CategoryActionState = {
   ok: boolean;
@@ -28,6 +29,7 @@ const inputSchema = z.object({
   slug: z.string().trim().max(80).optional(),
   nameEn: z.string().trim().min(2, "English name is required").max(80),
   nameNo: z.string().trim().min(2, "Norwegian name is required").max(80),
+  image: optionalImageUrlSchema,
   sortOrder: optionalInt(10_000),
 });
 
@@ -38,6 +40,7 @@ function readForm(formData: FormData) {
     slug: text("slug"),
     nameEn: text("nameEn"),
     nameNo: text("nameNo"),
+    image: text("image"),
     sortOrder: text("sortOrder"),
   };
 }
@@ -53,6 +56,27 @@ function isForeignKeyViolation(error: unknown): boolean {
 /** Categories label the header, shop filters and admin list — refresh them all. */
 function refreshCatalogue() {
   revalidatePath("/", "layout");
+}
+
+/**
+ * Removes a photo this app uploaded once nothing references it any more.
+ * Pasted URLs from other hosts are ignored, and the save never fails because
+ * of storage: a stale object is a smaller problem than a lost category.
+ */
+async function releaseCategoryImage(url: string) {
+  if (!isR2Configured()) return;
+
+  const key = keyFromPublicUrl(url);
+  if (!key) return;
+
+  try {
+    const stillUsed = await prisma.category.count({ where: { image: url } });
+    if (stillUsed > 0) return;
+
+    await deleteObject(key);
+  } catch (error) {
+    console.error("category photo cleanup failed", error);
+  }
 }
 
 export async function saveCategory(
@@ -77,13 +101,23 @@ export async function saveCategory(
     slug,
     nameEn: input.nameEn,
     nameNo: input.nameNo,
+    image: input.image ?? null,
     sortOrder: input.sortOrder ?? 0,
   };
 
   try {
+    // Read the current photo first so a replaced upload can be cleaned up.
+    const previous = id
+      ? await prisma.category.findUnique({ where: { id }, select: { image: true } })
+      : null;
+
     const category = id
       ? await prisma.category.update({ where: { id }, data })
       : await prisma.category.create({ data });
+
+    if (previous?.image && previous.image !== data.image) {
+      await releaseCategoryImage(previous.image);
+    }
 
     refreshCatalogue();
 
@@ -130,7 +164,17 @@ export async function deleteCategory(
       return { ok: false, message: "inUse", productCount };
     }
 
+    const existing = await prisma.category.findUnique({
+      where: { id },
+      select: { image: true },
+    });
+
     await prisma.category.delete({ where: { id } });
+
+    if (existing?.image) {
+      await releaseCategoryImage(existing.image);
+    }
+
     refreshCatalogue();
 
     return { ok: true, message: "saved" };

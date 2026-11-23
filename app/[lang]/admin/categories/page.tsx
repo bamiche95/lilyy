@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { AdminNav } from "@/components/admin/AdminNav";
 import { DeleteCategoryButton } from "@/components/admin/DeleteCategoryButton";
 import { getCategories } from "@/lib/categories";
 import { getDictionary } from "@/lib/dictionaries";
@@ -31,7 +31,7 @@ export default async function AdminCategoriesPage({ params }: PageProps) {
   const countById = new Map(counts.map((row) => [row.categoryId, row._count._all]));
 
   return (
-    <section className="container-page py-10 sm:py-14">
+    <section>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="eyebrow">{labels.title}</p>
@@ -45,8 +45,6 @@ export default async function AdminCategoriesPage({ params }: PageProps) {
         </Link>
       </div>
 
-      <AdminNav lang={lang} current="categories" />
-
       {categories.length === 0 ? (
         <div className="card mt-8 p-10 text-center">
           <p className="text-sm text-mocha">{labels.empty}</p>
@@ -59,6 +57,9 @@ export default async function AdminCategoriesPage({ params }: PageProps) {
           <table className="w-full min-w-[40rem] border-collapse text-sm">
             <thead>
               <tr className="border-b border-cocoa/10 text-left text-xs uppercase tracking-wider text-mocha">
+                <th scope="col" className="p-3 font-medium">
+                  {labels.photo}
+                </th>
                 <th scope="col" className="p-3 font-medium">
                   {labels.nameEn}
                 </th>
@@ -82,6 +83,22 @@ export default async function AdminCategoriesPage({ params }: PageProps) {
             <tbody>
               {categories.map((category) => (
                 <tr key={category.id} className="border-b border-cocoa/5 last:border-0">
+                  <td className="p-3">
+                    {category.image ? (
+                      <div className="relative size-12 overflow-hidden rounded-md border border-cocoa/10 bg-crust">
+                        <Image
+                          src={category.image}
+                          alt=""
+                          fill
+                          unoptimized
+                          sizes="3rem"
+                          className="object-cover"
+                        />
+                      </div>
+                    ) : (
+                      <span className="text-xs text-mocha">{labels.noPhoto}</span>
+                    )}
+                  </td>
                   <td className="p-3">
                     <p className="font-medium">
                       {localised(lang, category.nameEn, category.nameNo)}

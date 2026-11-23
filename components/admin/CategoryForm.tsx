@@ -6,12 +6,14 @@ import { useActionState, useEffect } from "react";
 
 import { saveCategory, type CategoryActionState } from "@/lib/actions/categories";
 import type { Dictionary } from "@/lib/dictionaries";
+import { CategoryPhoto } from "./CategoryPhoto";
 
 export type CategoryFormValues = {
   id: string;
   slug: string;
   nameEn: string;
   nameNo: string;
+  image: string | null;
   sortOrder: string;
 };
 
@@ -28,10 +30,12 @@ export function CategoryForm({
   lang,
   labels,
   values,
+  uploadEnabled,
 }: {
   lang: "en" | "no";
   labels: Labels;
   values?: CategoryFormValues;
+  uploadEnabled: boolean;
 }) {
   const router = useRouter();
   const [state, formAction, pending] = useActionState(saveCategory, initialState);
@@ -136,6 +140,13 @@ export function CategoryForm({
           </div>
         </div>
       </fieldset>
+
+      <CategoryPhoto
+        slug={values?.slug ?? ""}
+        initialImage={values?.image ?? null}
+        labels={labels}
+        uploadEnabled={uploadEnabled}
+      />
 
       <div className="flex flex-wrap items-center gap-3">
         <button type="submit" disabled={pending} className="btn btn-primary disabled:opacity-60">

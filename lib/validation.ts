@@ -60,6 +60,21 @@ export const checkoutItemSchema = z.object({
 const blankToUndefined = (value: unknown) =>
   typeof value === "string" && value.trim() === "" ? undefined : value;
 
+/**
+ * Optional photo URL. An empty value clears the photo (the actions store
+ * `null`); only absolute http(s) links pass, which keeps `keyFromPublicUrl`
+ * able to tell our uploads apart from pasted ones.
+ */
+export const optionalImageUrlSchema = z.preprocess(
+  blankToUndefined,
+  z
+    .string()
+    .trim()
+    .max(600)
+    .refine((value) => /^https?:\/\/\S+$/i.test(value), "Use a full image URL")
+    .optional(),
+);
+
 export const checkoutSchema = z
   .object({
     customerName: z.string().trim().min(2, "Please tell us your name").max(80),

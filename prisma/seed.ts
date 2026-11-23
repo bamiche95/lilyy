@@ -8,6 +8,12 @@ import { prisma } from "../lib/prisma";
 
 const publicUrl = process.env.R2_PUBLIC_URL?.replace(/\/+$/, "");
 const imageFor = (slug: string) => (publicUrl ? [`${publicUrl}/products/${slug}.jpg`] : []);
+/**
+ * Category photos follow the same convention as product photos: the CDN object
+ * is named after the slug. Without R2 there is nothing to point at, so the card
+ * falls back to the illustrated tile on the home page.
+ */
+const categoryImageFor = (slug: string) => (publicUrl ? `${publicUrl}/categories/${slug}.jpg` : null);
 
 /**
  * Fixed ids keep the seeded rows stable across environments, so the migration
@@ -165,14 +171,25 @@ const products = [
 
 async function seedCategories(): Promise<Map<string, string>> {
   for (const category of categories) {
+    const existing = await prisma.category.findUnique({
+      where: { slug: category.slug },
+      select: { image: true },
+    });
+    /**
+     * A re-seed must not undo photos uploaded from the admin, so only an empty
+     * slot gets the conventional CDN path.
+     */
+    const image = existing?.image ?? categoryImageFor(category.slug);
+
     await prisma.category.upsert({
       where: { slug: category.slug },
       update: {
         nameEn: category.nameEn,
         nameNo: category.nameNo,
         sortOrder: category.sortOrder,
+        image,
       },
-      create: category,
+      create: { ...category, image },
     });
   }
 

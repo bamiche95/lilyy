@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { AdminNav } from "@/components/admin/AdminNav";
 import { SendTestEmail } from "@/components/admin/SendTestEmail";
 import { getDictionary } from "@/lib/dictionaries";
 import { isLocale } from "@/lib/i18n";
@@ -46,7 +45,7 @@ export default async function AdminEmailTemplatePage({ params, searchParams }: P
   const rendered = template.render(selected);
 
   return (
-    <section className="container-page py-10 sm:py-14">
+    <section>
       <Link
         href={`/${lang}/admin/email`}
         className="text-xs text-mocha underline-offset-2 hover:text-berry hover:underline"
@@ -59,8 +58,6 @@ export default async function AdminEmailTemplatePage({ params, searchParams }: P
         <h1 className="mt-2 text-3xl">{name}</h1>
         <p className="mt-2 text-sm text-mocha">{labels.templateDescriptions[template.key]}</p>
       </div>
-
-      <AdminNav lang={lang} current="email" />
 
       <div className="card mt-6 p-5">
         <p className="text-xs uppercase tracking-wider text-mocha">{labels.subject}</p>

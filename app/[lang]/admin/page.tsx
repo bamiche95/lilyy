@@ -12,7 +12,6 @@ import {
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { AdminNav } from "@/components/admin/AdminNav";
 import { MetricCard } from "@/components/admin/MetricCard";
 import { SalesTrendChart } from "@/components/admin/SalesTrendChart";
 import { StatusBreakdown } from "@/components/admin/StatusBreakdown";
@@ -47,14 +46,12 @@ export default async function AdminOverviewPage({ params }: PageProps) {
   const money = (value: number) => formatPrice(value, "NOK", lang);
 
   return (
-    <section className="container-page py-8 sm:py-12">
+    <section>
       <div>
         <p className="eyebrow">{dict.nav.admin}</p>
         <h1 className="mt-2 text-3xl">{labels.title}</h1>
         <p className="mt-1 text-sm text-mocha">{labels.subtitle}</p>
       </div>
-
-      <AdminNav lang={lang} current="overview" />
 
       <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <MetricCard

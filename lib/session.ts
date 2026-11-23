@@ -2,6 +2,7 @@ import "server-only";
 
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { cache } from "react";
 
 import { auth } from "./auth";
 
@@ -14,10 +15,13 @@ export type UserRole = (typeof USER_ROLES)[number];
 /**
  * Current session, or null. Safe in Server Components, Server Actions and
  * Route Handlers — no redirects.
+ *
+ * Request-cached so the admin shell and the page it wraps share one session
+ * lookup instead of hitting the session table twice.
  */
-export async function getSession(): Promise<AppSession | null> {
+export const getSession = cache(async (): Promise<AppSession | null> => {
   return auth.api.getSession({ headers: await headers() });
-}
+});
 
 export async function getSessionUser(): Promise<SessionUser | null> {
   return (await getSession())?.user ?? null;
