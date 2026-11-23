@@ -35,6 +35,14 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 `https://www.lilyybakers.com` — the apex domain `lilyybakers.com` 308-redirects
 to `www`, so always use the `www` origin for auth and absolute links.
 
+`npm run build` runs `prisma generate` before `next build`, so the client is
+always generated from the committed schema inside Vercel's build environment.
+This matters because Vercel restores a cached `node_modules` and therefore skips
+`@prisma/client`'s install-time auto-generate: without the explicit step, adding
+a model (for example `Category`) fails the build with
+`Property 'category' does not exist on type 'PrismaClient'` while local builds
+keep passing against the locally generated client.
+
 ### Required environment variables (Production)
 
 Vercel never reads `.env.local`, so every variable below must be added under
