@@ -25,17 +25,27 @@ export function SiteHeader({
   currency: Currency;
   categories: ShopCategory[];
 }) {
-  // The bar is cocoa so the white lockup reads at full contrast; every control
-  // inside is styled for a dark surface.
+  // One bar, three slots: the lockup, the shop sections, then the account
+  // cluster. The bar is cocoa so the white lockup reads at full contrast; every
+  // control inside is styled for a dark surface.
   return (
     <header className="sticky top-0 z-40 border-b border-cream/15 bg-cocoa/95 pt-[env(safe-area-inset-top)] text-cream backdrop-blur">
-      <div className="container-page flex h-16 items-center justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-6">
+      <div className="container-page flex h-16 items-center gap-4">
+        {/* Both outer slots grow from a zero basis, so they end up the same width
+            and the category list sits on the centre of the bar rather than in the
+            gap left between a narrow logo and a wide cluster of controls. */}
+        <div className="flex min-w-0 flex-1 items-center">
           {/* The lockup carries its own tagline, so the header no longer repeats
               one; the localised tagline still appears in metadata and the hero. */}
           <SiteLogo lang={lang} loading="eager" />
+        </div>
 
-          <nav aria-label={dict.nav.shop} className="hidden md:block">
+        <div className="hidden min-w-0 items-center md:flex">
+          {/* Pills from lg, where the widened page shell leaves room for them.
+              Between md and lg the plain shop link stands in: the drawer trigger
+              is hidden from md up, so it would otherwise be the only way into the
+              shop on tablets. */}
+          <nav aria-label={dict.nav.shop} className="lg:hidden">
             <Link
               href={`/${lang}/shop`}
               className="text-sm text-cream/75 transition hover:text-cream"
@@ -43,9 +53,30 @@ export function SiteHeader({
               {dict.nav.shop}
             </Link>
           </nav>
+
+          <div className="hidden max-w-full overflow-x-auto lg:block">
+            <Suspense
+              fallback={
+                <CategoryStripLinks
+                  lang={lang}
+                  categories={categories}
+                  allLabel={dict.shop.allCategories}
+                  ariaLabel={dict.home.categoriesTitle}
+                  activeSlug={null}
+                />
+              }
+            >
+              <CategoryStrip
+                lang={lang}
+                categories={categories}
+                allLabel={dict.shop.allCategories}
+                ariaLabel={dict.home.categoriesTitle}
+              />
+            </Suspense>
+          </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
           {/* On small screens the header keeps only the logo and the hamburger:
               the basket lives in the tab bar and everything else in the drawer. */}
           <div className="hidden md:block">
@@ -59,31 +90,6 @@ export function SiteHeader({
           </div>
 
           <MobileMenuTrigger label={dict.nav.menu} />
-        </div>
-      </div>
-
-      {/* Desktop-only category strip: the shop sections one click from anywhere.
-          On phones the drawer carries the same list. */}
-      <div className="hidden border-t border-cream/10 md:block">
-        <div className="container-page">
-          <Suspense
-            fallback={
-              <CategoryStripLinks
-                lang={lang}
-                categories={categories}
-                allLabel={dict.shop.allCategories}
-                ariaLabel={dict.home.categoriesTitle}
-                activeSlug={null}
-              />
-            }
-          >
-            <CategoryStrip
-              lang={lang}
-              categories={categories}
-              allLabel={dict.shop.allCategories}
-              ariaLabel={dict.home.categoriesTitle}
-            />
-          </Suspense>
         </div>
       </div>
     </header>

@@ -34,7 +34,9 @@ export function CategoryStripLinks({
 
   return (
     <nav aria-label={ariaLabel} className="-mx-1 overflow-x-auto px-1">
-      <ul className="flex items-center gap-1 py-1.5">
+      {/* w-max + mx-auto centres the pills in the one-row header, and still lets
+          the scroller start at the first pill once they no longer fit. */}
+      <ul className="mx-auto flex w-max items-center gap-1">
         <li>
           <Link
             href={`/${lang}/shop`}
