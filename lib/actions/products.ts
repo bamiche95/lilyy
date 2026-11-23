@@ -5,7 +5,6 @@ import { z } from "zod";
 
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
-import { PRODUCT_CATEGORIES } from "@/lib/shop";
 import { slugify } from "@/lib/utils";
 import { fieldErrors } from "@/lib/validation";
 
@@ -48,7 +47,7 @@ const inputSchema = z.object({
   allergensNo: z.array(z.string().trim().min(1).max(60)).max(30),
   price: z.coerce.number().min(0, "Price cannot be negative").max(1_000_000),
   compareAtPrice: optionalMoney,
-  category: z.enum(PRODUCT_CATEGORIES),
+  categoryId: z.string().trim().min(1, "Choose a category"),
   weightGrams: optionalInt(),
   serves: optionalInt(1000),
   leadTimeHours: optionalInt(720),
@@ -80,7 +79,7 @@ function readForm(formData: FormData) {
     allergensNo: list("allergensNo"),
     price: text("price"),
     compareAtPrice: text("compareAtPrice"),
-    category: text("category"),
+    categoryId: text("categoryId"),
     weightGrams: text("weightGrams"),
     serves: text("serves"),
     leadTimeHours: text("leadTimeHours"),
@@ -151,7 +150,7 @@ export async function saveProduct(
     allergensNo: input.allergensNo,
     price: input.price,
     compareAtPrice: input.compareAtPrice ?? null,
-    category: input.category,
+    categoryId: input.categoryId,
     weightGrams: input.weightGrams ?? null,
     serves: input.serves ?? null,
     leadTimeHours: input.leadTimeHours ?? 24,
@@ -162,6 +161,19 @@ export async function saveProduct(
   };
 
   try {
+    const category = await prisma.category.findUnique({
+      where: { id: input.categoryId },
+      select: { id: true },
+    });
+
+    if (!category) {
+      return {
+        ok: false,
+        message: "invalid",
+        fieldErrors: { categoryId: "Choose a category." },
+      };
+    }
+
     const product = id
       ? await prisma.product.update({
           where: { id },

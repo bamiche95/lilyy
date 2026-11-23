@@ -97,5 +97,8 @@ export function proxy(request: NextRequest) {
 
 export const config = {
   // Everything except API routes, Next internals and files with an extension.
-  matcher: ["/((?!api|_next/static|_next/image|_vercel|.*\\..*).*)"],
+  // `_next` is excluded as a whole: the dev server serves its HMR socket at
+  // `/_next/webpack-hmr`, and locale-redirecting that request breaks the
+  // handshake (and with it Fast Refresh).
+  matcher: ["/((?!api|_next|_vercel|.*\\..*).*)"],
 };

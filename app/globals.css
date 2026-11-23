@@ -4,7 +4,7 @@
    Lilyy Bakers brand tokens
    --------------------------------------------------------------------------- */
 @theme {
-  --color-cream: #ffff;
+  --color-cream: #fdf6e3;
   --color-crust: #f3e9d7;
   --color-cocoa: #3b2a20;
   --color-mocha: #6b5443;
@@ -116,6 +116,17 @@
 
   .btn-outline:hover {
     border-color: color-mix(in srgb, var(--color-cocoa) 55%, transparent);
+  }
+
+  /* Same shape as .btn-outline, inverted for the cocoa header bar. */
+  .btn-outline-cream {
+    border: 1px solid color-mix(in srgb, var(--color-cream) 30%, transparent);
+    color: var(--color-cream);
+  }
+
+  .btn-outline-cream:hover {
+    border-color: color-mix(in srgb, var(--color-cream) 65%, transparent);
+    background-color: color-mix(in srgb, var(--color-cream) 10%, transparent);
   }
 
   .btn-gold {

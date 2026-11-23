@@ -6,7 +6,8 @@ import { useActionState, useEffect, type ReactNode } from "react";
 
 import { saveProduct, type ProductActionState } from "@/lib/actions/products";
 import type { Dictionary } from "@/lib/dictionaries";
-import { PRODUCT_CATEGORIES } from "@/lib/shop";
+import { localised } from "@/lib/i18n";
+import type { ShopCategory } from "@/lib/shop";
 
 export type ProductFormValues = {
   id: string;
@@ -21,7 +22,7 @@ export type ProductFormValues = {
   allergensNo: string[];
   price: string;
   compareAtPrice: string | null;
-  category: string;
+  categoryId: string;
   weightGrams: string | null;
   serves: string | null;
   leadTimeHours: string;
@@ -120,7 +121,7 @@ export function ProductForm({
 }: {
   lang: "en" | "no";
   labels: Labels;
-  categories: Dictionary["categories"];
+  categories: ShopCategory[];
   values?: ProductFormValues;
   /**
    * Rendered inside the form so a staged photo picker can submit its URL list
@@ -182,22 +183,31 @@ export function ProductForm({
           />
           <TextField label={labels.slug} name="slug" defaultValue={values?.slug} error={errors.slug} />
           <div>
-            <label htmlFor="category" className="label">
+            <label htmlFor="categoryId" className="label">
               {labels.category}
             </label>
-            <select
-              id="category"
-              name="category"
-              defaultValue={values?.category ?? "BREAD"}
-              className="field"
-            >
-              {PRODUCT_CATEGORIES.map((category) => (
-                <option key={category} value={category}>
-                  {categories[category]}
-                </option>
-              ))}
-            </select>
-            <FieldError message={errors.category} />
+            {categories.length === 0 ? (
+              <p className="rounded-lg border border-gold/40 bg-gold/10 px-3 py-2 text-sm text-cocoa">
+                {labels.noCategories}{" "}
+                <Link href={`/${lang}/admin/categories/new`} className="underline">
+                  {labels.newCategory}
+                </Link>
+              </p>
+            ) : (
+              <select
+                id="categoryId"
+                name="categoryId"
+                defaultValue={values?.categoryId ?? categories[0]?.id ?? ""}
+                className="field"
+              >
+                {categories.map((category) => (
+                  <option key={category.id} value={category.id}>
+                    {localised(lang, category.nameEn, category.nameNo)}
+                  </option>
+                ))}
+              </select>
+            )}
+            <FieldError message={errors.categoryId} />
           </div>
         </div>
       </fieldset>

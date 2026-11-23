@@ -1,20 +1,22 @@
 import Link from "next/link";
 
 import type { Dictionary } from "@/lib/dictionaries";
-import type { Locale } from "@/lib/i18n";
-import { PRODUCT_CATEGORIES, shopHref, type ShopCategory, type ShopSort } from "@/lib/shop";
+import { localised, type Locale } from "@/lib/i18n";
+import { shopHref, type ShopCategory, type ShopSort } from "@/lib/shop";
 import { cn } from "@/lib/utils";
 
 export function CategoryFilter({
   lang,
   dict,
+  categories,
   active,
   q,
   sort,
 }: {
   lang: Locale;
   dict: Dictionary;
-  active?: ShopCategory;
+  categories: ShopCategory[];
+  active?: string;
   q?: string;
   sort: ShopSort;
 }) {
@@ -35,17 +37,17 @@ export function CategoryFilter({
           </Link>
         </li>
 
-        {PRODUCT_CATEGORIES.map((category) => {
-          const isActive = active === category;
+        {categories.map((category) => {
+          const isActive = active === category.slug;
 
           return (
-            <li key={category}>
+            <li key={category.id}>
               <Link
-                href={shopHref(lang, { category, q, sort })}
+                href={shopHref(lang, { category: category.slug, q, sort })}
                 aria-current={isActive ? "page" : undefined}
                 className={cn(chip, isActive ? selected : idle)}
               >
-                {dict.categories[category]}
+                {localised(lang, category.nameEn, category.nameNo)}
               </Link>
             </li>
           );

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { ProductForm } from "@/components/admin/ProductForm";
 import { ProductImages } from "@/components/admin/ProductImages";
+import { getCategories } from "@/lib/categories";
 import { getDictionary } from "@/lib/dictionaries";
 import { isLocale } from "@/lib/i18n";
 import { isR2Configured } from "@/lib/r2";
@@ -20,7 +21,7 @@ export default async function NewProductPage({ params }: PageProps) {
 
   await requireAdmin(`/${lang}`);
 
-  const dict = await getDictionary(lang);
+  const [dict, categories] = await Promise.all([getDictionary(lang), getCategories()]);
   const labels = dict.adminProducts;
 
   return (
@@ -40,7 +41,7 @@ export default async function NewProductPage({ params }: PageProps) {
       <ProductForm
         lang={lang}
         labels={labels}
-        categories={dict.categories}
+        categories={categories}
         imagesSlot={
           <ProductImages
             initialImages={[]}

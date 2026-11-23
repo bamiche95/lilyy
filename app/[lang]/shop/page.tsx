@@ -5,8 +5,9 @@ import type { Prisma } from "@prisma/client";
 
 import { CategoryFilter } from "@/components/shop/CategoryFilter";
 import { ProductCard } from "@/components/shop/ProductCard";
+import { findCategory, getCategories } from "@/lib/categories";
 import { getDictionary } from "@/lib/dictionaries";
-import { isLocale, type Locale } from "@/lib/i18n";
+import { isLocale, localised, type Locale } from "@/lib/i18n";
 import { prisma } from "@/lib/prisma";
 import { getRequestCurrency } from "@/lib/request";
 import {
@@ -35,10 +36,10 @@ function orderByFor(sort: ShopFilters["sort"]): Prisma.ProductOrderByWithRelatio
   }
 }
 
-function whereFor(filters: ShopFilters): Prisma.ProductWhereInput {
+function whereFor(filters: ShopFilters, categoryId?: string): Prisma.ProductWhereInput {
   const where: Prisma.ProductWhereInput = { isAvailable: true };
 
-  if (filters.category) where.category = filters.category;
+  if (categoryId) where.categoryId = categoryId;
 
   if (filters.q) {
     where.OR = [
@@ -75,10 +76,18 @@ export default async function ShopPage({ params, searchParams }: PageProps) {
 
   const locale = lang as Locale;
   const filters = parseShopFilters(await searchParams);
-  const [dict, currency] = await Promise.all([getDictionary(locale), getRequestCurrency()]);
+  const [dict, currency, categories] = await Promise.all([
+    getDictionary(locale),
+    getRequestCurrency(),
+    getCategories(),
+  ]);
+
+  // An unknown/stale `?category=` slug falls back to the full listing.
+  const activeCategory = findCategory(categories, filters.category);
+  const activeSlug = activeCategory?.slug;
 
   const products = await prisma.product.findMany({
-    where: whereFor(filters),
+    where: whereFor(filters, activeCategory?.id),
     orderBy: orderByFor(filters.sort),
     select: {
       id: true,
@@ -89,7 +98,7 @@ export default async function ShopPage({ params, searchParams }: PageProps) {
       descriptionNo: true,
       price: true,
       images: true,
-      category: true,
+      category: { select: { nameEn: true, nameNo: true } },
     },
   });
 
@@ -102,7 +111,7 @@ export default async function ShopPage({ params, searchParams }: PageProps) {
     descriptionNo: product.descriptionNo,
     price: Number(product.price),
     images: product.images,
-    category: product.category,
+    category: localised(locale, product.category.nameEn, product.category.nameNo),
   }));
 
   const countLabel = cards.length === 1 ? dict.shop.resultsOne : dict.shop.resultsMany;
@@ -122,7 +131,7 @@ export default async function ShopPage({ params, searchParams }: PageProps) {
             className="mt-6 flex max-w-xl flex-col gap-2 sm:flex-row"
           >
             {filters.category ? (
-              <input type="hidden" name="category" value={filters.category} />
+              <input type="hidden" name="category" value={activeSlug ?? filters.category} />
             ) : null}
             {filters.sort !== "featured" ? (
               <input type="hidden" name="sort" value={filters.sort} />
@@ -150,7 +159,8 @@ export default async function ShopPage({ params, searchParams }: PageProps) {
           <CategoryFilter
             lang={locale}
             dict={dict}
-            active={filters.category}
+            categories={categories}
+            active={activeSlug}
             q={filters.q}
             sort={filters.sort}
           />
@@ -163,7 +173,7 @@ export default async function ShopPage({ params, searchParams }: PageProps) {
               {SHOP_SORTS.map((sort) => (
                 <li key={sort}>
                   <Link
-                    href={shopHref(locale, { category: filters.category, q: filters.q, sort })}
+                    href={shopHref(locale, { category: activeSlug, q: filters.q, sort })}
                     aria-current={sort === filters.sort ? "true" : undefined}
                     className={
                       sort === filters.sort

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { ProductForm } from "@/components/admin/ProductForm";
 import { ProductImages } from "@/components/admin/ProductImages";
+import { getCategories } from "@/lib/categories";
 import { getDictionary } from "@/lib/dictionaries";
 import { isLocale } from "@/lib/i18n";
 import { prisma } from "@/lib/prisma";
@@ -26,7 +27,7 @@ export default async function EditProductPage({ params }: PageProps) {
 
   if (!product) notFound();
 
-  const dict = await getDictionary(lang);
+  const [dict, categories] = await Promise.all([getDictionary(lang), getCategories()]);
   const labels = dict.adminProducts;
 
   return (
@@ -44,7 +45,7 @@ export default async function EditProductPage({ params }: PageProps) {
       <ProductForm
         lang={lang}
         labels={labels}
-        categories={dict.categories}
+        categories={categories}
         values={{
           id: product.id,
           slug: product.slug,
@@ -58,7 +59,7 @@ export default async function EditProductPage({ params }: PageProps) {
           allergensNo: product.allergensNo,
           price: product.price.toString(),
           compareAtPrice: product.compareAtPrice ? product.compareAtPrice.toString() : null,
-          category: product.category,
+          categoryId: product.categoryId,
           weightGrams: product.weightGrams === null ? null : String(product.weightGrams),
           serves: product.serves === null ? null : String(product.serves),
           leadTimeHours: String(product.leadTimeHours),

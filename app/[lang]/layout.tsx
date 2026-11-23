@@ -10,6 +10,7 @@ import { I18nProvider } from "@/components/providers/I18nProvider";
 import { MobileTabBar } from "@/components/pwa/MobileTabBar";
 import { ServiceWorkerRegister } from "@/components/pwa/ServiceWorkerRegister";
 import { getCurrencyRates } from "@/lib/currency";
+import { getCategories } from "@/lib/categories";
 import { getDictionary } from "@/lib/dictionaries";
 import { LOCALE_META, isLocale } from "@/lib/i18n";
 import { getRequestCurrency } from "@/lib/request";
@@ -83,7 +84,11 @@ export default async function RootLayout({ children, params }: RootLayoutProps) 
     notFound();
   }
 
-  const [dict, currency] = await Promise.all([getDictionary(lang), getRequestCurrency()]);
+  const [dict, currency, categories] = await Promise.all([
+    getDictionary(lang),
+    getRequestCurrency(),
+    getCategories(),
+  ]);
 
   return (
     <html lang={LOCALE_META[lang].htmlLang} className="h-full">
@@ -98,7 +103,7 @@ export default async function RootLayout({ children, params }: RootLayoutProps) 
                 {lang === "no" ? "Hopp til innhold" : "Skip to content"}
               </a>
 
-              <SiteHeader lang={lang} dict={dict} currency={currency} />
+              <SiteHeader lang={lang} dict={dict} currency={currency} categories={categories} />
 
               <main id="main-content" className="flex-1">
                 {children}
@@ -109,6 +114,7 @@ export default async function RootLayout({ children, params }: RootLayoutProps) 
               <MobileMenuSheet
                 lang={lang}
                 currency={currency}
+                categories={categories}
                 labels={{
                   title: dict.nav.menu,
                   close: dict.common.close,
@@ -121,10 +127,15 @@ export default async function RootLayout({ children, params }: RootLayoutProps) 
                   signOut: dict.nav.signOut,
                   account: dict.nav.account,
                   admin: dict.nav.admin,
+                  profile: dict.nav.profile,
+                  orders: dict.nav.orders,
+                  payments: dict.nav.payments,
                   preferences: dict.nav.preferences,
                   language: dict.common.language,
                   currency: dict.common.currency,
                   error: dict.auth.genericError,
+                  categories: dict.home.categoriesTitle,
+                  allCategories: dict.shop.allCategories,
                 }}
               />
 

@@ -3,10 +3,11 @@
    - immutable build assets: cache first
    - everything else (API, auth) is left untouched
 */
-const VERSION = "lilyy-v2";
+const VERSION = "lilyy-v3";
 const STATIC_CACHE = `${VERSION}-static`;
 const PRECACHE = [
   "/offline.html",
+  "/images/lilyy-logo.png",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
   "/icons/maskable-512.png",

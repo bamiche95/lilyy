@@ -1,13 +1,17 @@
 "use client";
 
 import {
+  CreditCard,
   House,
   LayoutDashboard,
   Menu,
   Package,
+  ReceiptText,
   ShoppingBasket,
+  UserRound,
   X,
 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
@@ -17,7 +21,8 @@ import { SignOutButton } from "@/components/auth/SignOutButton";
 import { useCart } from "@/components/cart/CartProvider";
 import { authClient } from "@/lib/auth-client";
 import type { Currency } from "@/lib/currency";
-import type { Locale } from "@/lib/i18n";
+import { localised, type Locale } from "@/lib/i18n";
+import type { ShopCategory } from "@/lib/shop";
 
 import { CurrencySwitcher } from "./CurrencySwitcher";
 import { LanguageSwitcher } from "./LanguageSwitcher";
@@ -38,10 +43,15 @@ export type MobileMenuLabels = {
   signOut: string;
   account: string;
   admin: string;
+  profile: string;
+  orders: string;
+  payments: string;
   preferences: string;
   language: string;
   currency: string;
   error: string;
+  categories: string;
+  allCategories: string;
 };
 
 type NavItem = {
@@ -69,7 +79,7 @@ export function MobileMenuTrigger({ label }: { label: string }) {
       aria-haspopup="dialog"
       aria-expanded={open}
       aria-controls={SHEET_ID}
-      className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-cocoa/25 text-cocoa transition hover:border-cocoa/55 active:scale-95 md:hidden"
+      className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-cream/30 text-cream transition hover:border-cream/70 active:scale-95 md:hidden"
     >
       <Menu aria-hidden className="h-[18px] w-[18px]" strokeWidth={1.8} />
     </button>
@@ -85,10 +95,12 @@ export function MobileMenuSheet({
   lang,
   labels,
   currency,
+  categories,
 }: {
   lang: Locale;
   labels: MobileMenuLabels;
   currency: Currency;
+  categories: ShopCategory[];
 }) {
   const { open, closeMenu } = useMobileMenu();
   const pathname = usePathname() ?? `/${lang}`;
@@ -170,6 +182,12 @@ export function MobileMenuSheet({
     navItems.push({ href: `/${lang}/admin`, label: labels.admin, icon: LayoutDashboard });
   }
 
+  const accountLinks: Pick<NavItem, "href" | "label" | "icon">[] = [
+    { href: `/${lang}/account`, label: labels.profile, icon: UserRound },
+    { href: `/${lang}/account/orders`, label: labels.orders, icon: ReceiptText },
+    { href: `/${lang}/account/payments`, label: labels.payments, icon: CreditCard },
+  ];
+
   return (
     <div
       aria-hidden={!open}
@@ -195,10 +213,19 @@ export function MobileMenuSheet({
           open ? "translate-x-0" : "translate-x-full"
         }`}
       >
-        <div className="flex items-start justify-between gap-3 border-b border-cocoa/10 px-5 pt-[max(env(safe-area-inset-top),1.25rem)] pb-4">
+        {/* The lockup band repeats the cocoa header so the white logo reads the
+            same in the drawer as it does in the bar it slid out of. */}
+        <div className="flex items-start justify-between gap-3 bg-cocoa px-5 pt-[max(env(safe-area-inset-top),1.25rem)] pb-4">
           <div className="min-w-0">
-            <p className="font-serif text-lg leading-none">Lilyy Bakers</p>
-            <p className="mt-1 truncate text-[10px] tracking-[0.3em] text-mocha uppercase">
+            <Image
+              src="/images/lilyy-logo.png"
+              alt="Lilyy Bakers"
+              width={669}
+              height={270}
+              sizes="90px"
+              className="h-8 w-auto"
+            />
+            <p className="mt-1 truncate text-[10px] tracking-[0.3em] text-cream/60 uppercase">
               {labels.tagline}
             </p>
           </div>
@@ -207,7 +234,7 @@ export function MobileMenuSheet({
             type="button"
             onClick={closeMenu}
             aria-label={labels.close}
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-cocoa/20 text-mocha transition hover:bg-crust hover:text-cocoa active:scale-95"
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-cream/25 text-cream/80 transition hover:bg-cream/10 hover:text-cream active:scale-95"
           >
             <X aria-hidden className="h-4 w-4" />
           </button>
@@ -255,6 +282,36 @@ export function MobileMenuSheet({
             </ul>
           </nav>
 
+          {categories.length > 0 ? (
+            <div className="mt-5 rounded-2xl border border-cocoa/10 bg-white p-4">
+              <p className="text-[10px] tracking-[0.25em] text-mocha uppercase">
+                {labels.categories}
+              </p>
+              <ul className="mt-2 space-y-1 text-sm">
+                <li>
+                  <Link
+                    href={`/${lang}/shop`}
+                    onClick={closeMenu}
+                    className="block rounded-xl px-2 py-2 text-cocoa transition hover:bg-crust"
+                  >
+                    {labels.allCategories}
+                  </Link>
+                </li>
+                {categories.map((category) => (
+                  <li key={category.id}>
+                    <Link
+                      href={`/${lang}/shop?category=${encodeURIComponent(category.slug)}`}
+                      onClick={closeMenu}
+                      className="block rounded-xl px-2 py-2 text-cocoa transition hover:bg-crust"
+                    >
+                      {localised(lang, category.nameEn, category.nameNo)}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
+
           <div className="mt-5 rounded-2xl border border-cocoa/10 bg-white p-4">
             <p className="text-[10px] tracking-[0.25em] text-mocha uppercase">{labels.account}</p>
 
@@ -266,6 +323,26 @@ export function MobileMenuSheet({
                 {session.user.name ? (
                   <p className="truncate text-xs text-mocha">{session.user.email}</p>
                 ) : null}
+
+                <ul className="mt-3 space-y-1">
+                  {accountLinks.map((link) => {
+                    const Icon = link.icon;
+
+                    return (
+                      <li key={link.href}>
+                        <Link
+                          href={link.href}
+                          onClick={closeMenu}
+                          className="flex min-h-11 items-center gap-2.5 rounded-xl px-2 py-1.5 text-sm font-medium text-cocoa transition hover:bg-crust"
+                        >
+                          <Icon aria-hidden className="h-4 w-4 text-mocha" strokeWidth={1.7} />
+                          {link.label}
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+
                 <SignOutButton
                   lang={lang}
                   label={labels.signOut}

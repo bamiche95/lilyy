@@ -3,7 +3,7 @@ import Link from "next/link";
 import { getDictionary } from "@/lib/dictionaries";
 import type { Locale } from "@/lib/i18n";
 
-export type AdminSection = "overview" | "products" | "orders" | "users" | "email";
+export type AdminSection = "overview" | "products" | "categories" | "orders" | "users" | "email";
 
 /**
  * The admin area has no shared layout, so each list page drops this strip in
@@ -22,6 +22,7 @@ export async function AdminNav({
   const items: { key: AdminSection; href: string; label: string }[] = [
     { key: "overview", href: `/${lang}/admin`, label: dict.adminOverview.title },
     { key: "products", href: `/${lang}/admin/products`, label: dict.adminProducts.title },
+    { key: "categories", href: `/${lang}/admin/categories`, label: dict.adminCategories.title },
     { key: "orders", href: `/${lang}/admin/orders`, label: dict.adminOrders.title },
     { key: "users", href: `/${lang}/admin/users`, label: dict.adminUsers.title },
     { key: "email", href: `/${lang}/admin/email`, label: dict.adminEmail.title },

@@ -29,7 +29,7 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
       descriptionNo: true,
       price: true,
       images: true,
-      category: true,
+      category: { select: { nameEn: true, nameNo: true } },
     },
   });
 
@@ -81,7 +81,9 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
                     />
                   ) : null}
                 </Link>
-                <p className="eyebrow mt-4">{dict.categories[product.category]}</p>
+                <p className="eyebrow mt-4">
+                  {localised(lang, product.category.nameEn, product.category.nameNo)}
+                </p>
                 <h3 className="mt-1 text-lg">
                   <Link href={`/${lang}/shop/${product.slug}`} className="hover:text-mocha">
                     {localised(lang, product.nameEn, product.nameNo)}

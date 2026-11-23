@@ -27,12 +27,18 @@ export function isAdmin(user: { role?: string | null } | null | undefined): bool
   return user?.role === "admin";
 }
 
-/** Redirects to sign-in when there is no session. */
-export async function requireUser(redirectTo = "/en/auth/sign-in"): Promise<AppSession> {
+/**
+ * Redirects to sign-in when there is no session, then back to `next` so an
+ * account deep link survives the round trip.
+ */
+export async function requireUser(
+  redirectTo = "/en/auth/sign-in",
+  next = "/en/account",
+): Promise<AppSession> {
   const session = await getSession();
 
   if (!session?.user) {
-    redirect(`${redirectTo}?next=${encodeURIComponent("/en/account")}`);
+    redirect(`${redirectTo}?next=${encodeURIComponent(next)}`);
   }
 
   return session;

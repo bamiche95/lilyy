@@ -95,9 +95,7 @@ export const updateOrderStatusSchema = z.object({
 export type UpdateOrderStatusInput = z.infer<typeof updateOrderStatusSchema>;
 
 export const productFilterSchema = z.object({
-  category: z
-    .enum(["BREAD", "CAKE", "PASTRY", "COOKIES", "SAVOURY", "SEASONAL", "DRINKS"])
-    .optional(),
+  category: z.string().trim().max(80).optional(),
   search: z.string().trim().max(80).optional(),
   sort: z.enum(["featured", "price-asc", "price-desc", "newest"]).default("featured"),
 });

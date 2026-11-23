@@ -17,7 +17,8 @@ export type ProductCardData = {
   descriptionNo: string;
   price: number;
   images: string[];
-  category: keyof Dictionary["categories"];
+  /** Already localised by the page that built the card. */
+  category: string;
 };
 
 export function ProductCard({
@@ -59,7 +60,7 @@ export function ProductCard({
       </Link>
 
       <div className="flex flex-1 flex-col p-5">
-        <p className="eyebrow">{dict.categories[product.category]}</p>
+        <p className="eyebrow">{product.category}</p>
         <h3 className="mt-1 text-lg">
           <Link href={productHref(lang, product.slug)} className="hover:text-mocha">
             {name}

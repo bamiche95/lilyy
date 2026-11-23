@@ -17,16 +17,6 @@ datasource db {
 // Enums
 // ---------------------------------------------------------------------------
 
-enum ProductCategory {
-  BREAD
-  CAKE
-  PASTRY
-  COOKIES
-  SAVOURY
-  SEASONAL
-  DRINKS
-}
-
 enum FulfilmentType {
   DELIVERY
   PICKUP
@@ -85,34 +75,53 @@ enum EmailType {
 // Catalogue
 // ---------------------------------------------------------------------------
 
+/// Shop sections (Pies, Round Cakes, …). Editable in the admin area, so the
+/// bakery can add or rename a section without a deploy.
+model Category {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  nameEn    String
+  nameNo    String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  products Product[]
+
+  @@index([sortOrder])
+  @@map("categories")
+}
+
 model Product {
-  id             String          @id @default(cuid())
-  slug           String          @unique
+  id             String   @id @default(cuid())
+  slug           String   @unique
   nameEn         String
   nameNo         String
-  descriptionEn  String          @db.Text
-  descriptionNo  String          @db.Text
-  price          Decimal         @db.Decimal(10, 2)
-  compareAtPrice Decimal?        @db.Decimal(10, 2)
-  category       ProductCategory @default(BREAD)
-  images         String[]        @default([])
-  ingredientsEn  String?         @db.Text
-  ingredientsNo  String?         @db.Text
-  allergensEn    String[]        @default([])
-  allergensNo    String[]        @default([])
+  descriptionEn  String   @db.Text
+  descriptionNo  String   @db.Text
+  price          Decimal  @db.Decimal(10, 2)
+  compareAtPrice Decimal? @db.Decimal(10, 2)
+  // Restrict: a category with products cannot be deleted by accident.
+  categoryId     String
+  images         String[] @default([])
+  ingredientsEn  String?  @db.Text
+  ingredientsNo  String?  @db.Text
+  allergensEn    String[] @default([])
+  allergensNo    String[] @default([])
   weightGrams    Int?
   serves         Int?
-  isFeatured     Boolean         @default(false)
-  isAvailable    Boolean         @default(true)
-  stock          Int             @default(0)
-  leadTimeHours  Int             @default(24)
-  sortOrder      Int             @default(0)
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
+  isFeatured     Boolean  @default(false)
+  isAvailable    Boolean  @default(true)
+  stock          Int      @default(0)
+  leadTimeHours  Int      @default(24)
+  sortOrder      Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
+  category   Category    @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   orderItems OrderItem[]
 
-  @@index([category, isAvailable])
+  @@index([categoryId, isAvailable])
   @@index([isFeatured, sortOrder])
   @@map("products")
 }

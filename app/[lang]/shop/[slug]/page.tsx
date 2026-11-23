@@ -32,7 +32,8 @@ const getProduct = cache(async (slug: string) => {
       allergensNo: true,
       price: true,
       compareAtPrice: true,
-      category: true,
+      categoryId: true,
+      category: { select: { slug: true, nameEn: true, nameNo: true } },
       images: true,
       weightGrams: true,
       serves: true,
@@ -95,7 +96,7 @@ export default async function ProductPage({ params }: PageProps) {
   const compareAt = product.compareAtPrice ? Number(product.compareAtPrice) : null;
 
   const related = await prisma.product.findMany({
-    where: { category: product.category, isAvailable: true, id: { not: product.id } },
+    where: { categoryId: product.categoryId, isAvailable: true, id: { not: product.id } },
     orderBy: [{ isFeatured: "desc" }, { sortOrder: "asc" }],
     take: 3,
     select: {
@@ -107,7 +108,7 @@ export default async function ProductPage({ params }: PageProps) {
       descriptionNo: true,
       price: true,
       images: true,
-      category: true,
+      category: { select: { nameEn: true, nameNo: true } },
     },
   });
 
@@ -140,7 +141,14 @@ export default async function ProductPage({ params }: PageProps) {
         <ProductGallery images={product.images} alt={name} />
 
         <div>
-          <p className="eyebrow">{dict.categories[product.category]}</p>
+          <p className="eyebrow">
+            <Link
+              href={shopHref(locale, { category: product.category.slug })}
+              className="transition hover:text-cocoa"
+            >
+              {localised(locale, product.category.nameEn, product.category.nameNo)}
+            </Link>
+          </p>
           <h1 className="mt-2 text-3xl sm:text-4xl">{name}</h1>
           <p className="mt-4 text-base leading-relaxed text-mocha">{description}</p>
 
@@ -213,7 +221,11 @@ export default async function ProductPage({ params }: PageProps) {
             {related.map((item) => (
               <ProductCard
                 key={item.id}
-                product={{ ...item, price: Number(item.price) }}
+                product={{
+                  ...item,
+                  price: Number(item.price),
+                  category: localised(locale, item.category.nameEn, item.category.nameNo),
+                }}
                 lang={locale}
                 dict={dict}
                 currency={currency}

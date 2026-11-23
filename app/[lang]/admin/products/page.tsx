@@ -34,7 +34,7 @@ export default async function AdminProductsPage({ params }: PageProps) {
         nameEn: true,
         nameNo: true,
         price: true,
-        category: true,
+        category: { select: { nameEn: true, nameNo: true } },
         images: true,
         isAvailable: true,
         isFeatured: true,
@@ -54,9 +54,14 @@ export default async function AdminProductsPage({ params }: PageProps) {
             {products.length} {products.length === 1 ? dict.shop.resultsOne : dict.shop.resultsMany}
           </p>
         </div>
-        <Link href={`/${lang}/admin/products/new`} className="btn btn-primary">
-          {labels.new}
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link href={`/${lang}/admin/categories`} className="btn btn-outline">
+            {dict.adminCategories.title}
+          </Link>
+          <Link href={`/${lang}/admin/products/new`} className="btn btn-primary">
+            {labels.new}
+          </Link>
+        </div>
       </div>
 
       <AdminNav lang={lang} current="products" />
@@ -112,7 +117,9 @@ export default async function AdminProductsPage({ params }: PageProps) {
                       </div>
                     </div>
                   </td>
-                  <td className="p-3 text-mocha">{dict.categories[product.category]}</td>
+                  <td className="p-3 text-mocha">
+                    {localised(lang, product.category.nameEn, product.category.nameNo)}
+                  </td>
                   <td className="p-3 font-medium">{formatPrice(product.price, currency, lang)}</td>
                   <td className="p-3">
                     <AvailabilityToggle

@@ -3,13 +3,28 @@
  *
  * Run with: npm run db:seed
  */
-import { ProductCategory } from "@prisma/client";
-
 import { auth } from "../lib/auth";
 import { prisma } from "../lib/prisma";
 
 const publicUrl = process.env.R2_PUBLIC_URL?.replace(/\/+$/, "");
 const imageFor = (slug: string) => (publicUrl ? [`${publicUrl}/products/${slug}.jpg`] : []);
+
+/**
+ * Fixed ids keep the seeded rows stable across environments, so the migration
+ * backfill and this seed always agree on which category is which.
+ */
+const categories = [
+  { id: "cat_pies", slug: "pies", nameEn: "Pies", nameNo: "Paier", sortOrder: 0 },
+  {
+    id: "cat_round_cakes",
+    slug: "round-cakes",
+    nameEn: "Round Cakes",
+    nameNo: "Runde kaker",
+    sortOrder: 1,
+  },
+  { id: "cat_rolls", slug: "rolls", nameEn: "Rolls", nameNo: "Boller", sortOrder: 2 },
+  { id: "cat_snacks", slug: "snacks", nameEn: "Snacks", nameNo: "Småbakst", sortOrder: 3 },
+] as const;
 
 const products = [
   {
@@ -21,7 +36,7 @@ const products = [
     descriptionNo:
       "Sakte hevet i 24 timer på vår 12 år gamle surdeig, med sprø skorpe og luftig, saftig kjerne.",
     price: "89.00",
-    category: ProductCategory.BREAD,
+    categorySlug: "snacks",
     weightGrams: 900,
     allergensEn: ["gluten"],
     allergensNo: ["gluten"],
@@ -38,7 +53,7 @@ const products = [
     descriptionNo:
       "Myk deig med kardemomme, fylt med kanelsmør og toppet med perlesukker. Selges i firedobbel porsjon.",
     price: "65.00",
-    category: ProductCategory.PASTRY,
+    categorySlug: "rolls",
     weightGrams: 480,
     allergensEn: ["gluten", "milk", "egg"],
     allergensNo: ["gluten", "melk", "egg"],
@@ -55,7 +70,7 @@ const products = [
       "The Norwegian celebration bread: plaited, filled with almond paste and glazed with vanilla icing.",
     descriptionNo: "Den norske festbaken: fletter med mandelmasse og glasur smakt til med vanilje.",
     price: "149.00",
-    category: ProductCategory.PASTRY,
+    categorySlug: "round-cakes",
     weightGrams: 650,
     allergensEn: ["gluten", "milk", "egg", "almonds"],
     allergensNo: ["gluten", "melk", "egg", "mandler"],
@@ -72,7 +87,7 @@ const products = [
     descriptionNo:
       "Tre lag mørk sjokoladebunn, saltet karamell og blank ganache. Nok til 10–12 personer.",
     price: "449.00",
-    category: ProductCategory.CAKE,
+    categorySlug: "round-cakes",
     serves: 12,
     allergensEn: ["gluten", "milk", "egg", "soy"],
     allergensNo: ["gluten", "melk", "egg", "soya"],
@@ -89,7 +104,7 @@ const products = [
       "A moist brown-sugar cake with cinnamon, ginger and cloves, dusted with icing sugar.",
     descriptionNo: "Saftig brunsukkerkake med kanel, ingefær og nellik, drysset med melis.",
     price: "379.00",
-    category: ProductCategory.CAKE,
+    categorySlug: "round-cakes",
     serves: 10,
     allergensEn: ["gluten", "milk", "egg"],
     allergensNo: ["gluten", "melk", "egg"],
@@ -104,7 +119,7 @@ const products = [
     descriptionEn: "Chewy oat cookies sweetened with Norwegian honey. Packed in a 300 g tin.",
     descriptionNo: "Seige havrekjeks søtet med norsk honning. Pakket i 300 g boks.",
     price: "69.00",
-    category: ProductCategory.COOKIES,
+    categorySlug: "snacks",
     weightGrams: 300,
     allergensEn: ["gluten", "milk"],
     allergensNo: ["gluten", "melk"],
@@ -121,7 +136,7 @@ const products = [
     descriptionNo:
       "Smørdeig fylt med lagret Jarlsberg, timian og karamellisert løk. Nok til 6 personer.",
     price: "189.00",
-    category: ProductCategory.SAVOURY,
+    categorySlug: "pies",
     serves: 6,
     allergensEn: ["gluten", "milk", "egg"],
     allergensNo: ["gluten", "melk", "egg"],
@@ -138,7 +153,7 @@ const products = [
     descriptionNo:
       "Et fyldig, lett søtt brød med rosiner og sukat. Tilgjengelig november–desember.",
     price: "129.00",
-    category: ProductCategory.SEASONAL,
+    categorySlug: "rolls",
     weightGrams: 750,
     allergensEn: ["gluten", "milk", "egg"],
     allergensNo: ["gluten", "melk", "egg"],
@@ -148,12 +163,38 @@ const products = [
   },
 ] as const;
 
-async function seedProducts() {
+async function seedCategories(): Promise<Map<string, string>> {
+  for (const category of categories) {
+    await prisma.category.upsert({
+      where: { slug: category.slug },
+      update: {
+        nameEn: category.nameEn,
+        nameNo: category.nameNo,
+        sortOrder: category.sortOrder,
+      },
+      create: category,
+    });
+  }
+
+  const rows = await prisma.category.findMany({ select: { id: true, slug: true } });
+
+  console.log(`✓ ${categories.length} categories upserted`);
+
+  return new Map(rows.map((row) => [row.slug, row.id]));
+}
+
+async function seedProducts(categoryIds: Map<string, string>) {
   for (const [index, product] of products.entries()) {
-    const { slug, ...rest } = product;
+    const { slug, categorySlug, ...rest } = product;
+    const categoryId = categoryIds.get(categorySlug);
+
+    if (!categoryId) {
+      throw new Error(`Unknown category "${categorySlug}" for product "${slug}"`);
+    }
 
     const data = {
       ...rest,
+      categoryId,
       allergensEn: [...product.allergensEn],
       allergensNo: [...product.allergensNo],
       images: imageFor(slug),
@@ -199,7 +240,8 @@ async function seedAdmin() {
 }
 
 async function main() {
-  await seedProducts();
+  const categoryIds = await seedCategories();
+  await seedProducts(categoryIds);
   await seedAdmin();
 }
 
