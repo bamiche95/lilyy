@@ -18,7 +18,7 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Typography uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts): **Playfair Display** for headings and **Inter Tight** for body and UI text. Both are self-hosted at build time — the browser never talks to Google — and are wired through `--font-display` / `--font-body` in `app/fonts.ts`, then mapped onto Tailwind's `--font-serif` / `--font-sans` in `app/globals.css`.
 
 ## Learn More
 

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { notFound } from "next/navigation";
 
+import { bodyFont, displayFont } from "@/app/fonts";
 import { CartProvider } from "@/components/cart/CartProvider";
 import { MobileMenuSheet } from "@/components/layout/MobileMenu";
 import { MobileMenuProvider } from "@/components/layout/MobileMenuProvider";
@@ -91,7 +92,10 @@ export default async function RootLayout({ children, params }: RootLayoutProps) 
   ]);
 
   return (
-    <html lang={LOCALE_META[lang].htmlLang} className="h-full">
+    <html
+      lang={LOCALE_META[lang].htmlLang}
+      className={`h-full ${displayFont.variable} ${bodyFont.variable}`}
+    >
       <body className="flex min-h-full flex-col bg-cream pb-[calc(5.5rem+env(safe-area-inset-bottom))] text-cocoa antialiased md:pb-0">
         <I18nProvider locale={lang} currency={currency} rates={getCurrencyRates()}>
           <CartProvider>
