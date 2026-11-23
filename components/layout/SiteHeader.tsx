@@ -54,7 +54,10 @@ export function SiteHeader({
             </Link>
           </nav>
 
-          <div className="hidden max-w-full overflow-x-auto lg:block">
+          {/* No overflow here: the strip below is the one scroller. Nesting a
+              second one made its scrollbar take height off the pills, which then
+              spilled into a vertical scrollbar. */}
+          <div className="hidden min-w-0 max-w-full lg:block">
             <Suspense
               fallback={
                 <CategoryStripLinks

@@ -32,11 +32,18 @@ export function CategoryStripLinks({
 }: CategoryStripProps & { activeSlug: string | null }) {
   const everythingActive = activeSlug === null;
 
+  // Scrolls sideways only: overflow-y stays hidden so a stray pixel can never
+  // raise a vertical bar inside the header, and the bars themselves are drawn
+  // by nothing, so the pills keep the full height of the bar. The vertical
+  // padding keeps the focus ring from being clipped by the scroll box.
   return (
-    <nav aria-label={ariaLabel} className="-mx-1 overflow-x-auto px-1">
+    <nav
+      aria-label={ariaLabel}
+      className="-mx-1 overflow-x-auto overflow-y-hidden px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+    >
       {/* w-max + mx-auto centres the pills in the one-row header, and still lets
           the scroller start at the first pill once they no longer fit. */}
-      <ul className="mx-auto flex w-max items-center gap-1">
+      <ul className="mx-auto flex w-max items-center gap-1 py-1.5">
         <li>
           <Link
             href={`/${lang}/shop`}
