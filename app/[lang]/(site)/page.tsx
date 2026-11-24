@@ -13,6 +13,7 @@ import { getDictionary } from "@/lib/dictionaries";
 import { isLocale, localised } from "@/lib/i18n";
 import { prisma } from "@/lib/prisma";
 import { getRequestCurrency } from "@/lib/request";
+import { getSessionUser } from "@/lib/session";
 
 export default async function HomePage({ params }: { params: Promise<{ lang: string }> }) {
   const { lang } = await params;
@@ -21,7 +22,7 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
     notFound();
   }
 
-  const [dict, currency, categories, featured, content] = await Promise.all([
+  const [dict, currency, categories, featured, content, user] = await Promise.all([
     getDictionary(lang),
     getRequestCurrency(),
     getCategories(),
@@ -42,6 +43,12 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
       },
     }),
     getSiteContent(lang),
+    /**
+     * Only used to decide whether to advertise account creation. The storefront
+     * is already rendered per request (currency comes from a cookie), and
+     * `getSession` is request-cached, so this is a free extra lookup.
+     */
+    getSessionUser(),
   ]);
 
   return (
@@ -56,9 +63,11 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
               <Link href={`/${lang}/shop`} className="btn btn-primary">
                 {content["hero.ctaLabel"]}
               </Link>
-              <Link href={`/${lang}/auth/sign-up`} className="btn btn-outline">
-                {dict.nav.signUp}
-              </Link>
+              {user ? null : (
+                <Link href={`/${lang}/auth/sign-up`} className="btn btn-outline">
+                  {dict.nav.signUp}
+                </Link>
+              )}
             </div>
           </div>
 
@@ -163,17 +172,21 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
         )}
       </section>
 
-      <section className="border-t border-cocoa/10 bg-white">
-        <div className="container-page flex flex-col items-start gap-4 py-14 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="text-2xl">{content["sections.signup.title"]}</h2>
-            <p className="mt-2 text-sm text-mocha">{content["sections.signup.subtitle"]}</p>
+      {/* The sign-up pitch is for visitors only — a signed-in customer already
+          has an account, and the account pages are one click away in the header. */}
+      {user ? null : (
+        <section className="border-t border-cocoa/10 bg-white">
+          <div className="container-page flex flex-col items-start gap-4 py-14 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-2xl">{content["sections.signup.title"]}</h2>
+              <p className="mt-2 text-sm text-mocha">{content["sections.signup.subtitle"]}</p>
+            </div>
+            <Link href={`/${lang}/auth/sign-up`} className="btn btn-gold">
+              {dict.auth.submitSignUp}
+            </Link>
           </div>
-          <Link href={`/${lang}/auth/sign-up`} className="btn btn-gold">
-            {dict.auth.submitSignUp}
-          </Link>
-        </div>
-      </section>
+        </section>
+      )}
     </>
   );
 }
