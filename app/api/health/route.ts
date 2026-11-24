@@ -4,10 +4,12 @@ import { NextResponse } from "next/server";
  * Deployment health probe.
  *
  * Reports *presence* of the environment variables each subsystem needs, plus the
- * result of one database ping and one Better Auth initialisation. Values are
- * never returned — only booleans and error names/codes — so the endpoint is
- * safe to hit in production and answers the "why is every route a 500?"
- * question without exposing secrets.
+ * result of one database ping and one Better Auth initialisation. No secret
+ * values are returned — only booleans, public host names and error
+ * names/codes — so the endpoint is safe to hit in production and answers the
+ * "why is every route a 500?" question. `warnings` carries misconfigurations
+ * that do not fail the request but break a feature, such as a production
+ * `BETTER_AUTH_URL` pointing at localhost.
  */
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -50,12 +52,14 @@ export async function GET() {
   }
 
   const missingEnv = REQUIRED_ENV.filter((key) => !env[key]);
+  const warnings: string[] = [];
   const report: Record<string, unknown> = {
     ok: true,
     nodeEnv: process.env.NODE_ENV ?? null,
     vercelEnv: process.env.VERCEL_ENV ?? null,
     commit: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? null,
     missingEnv,
+    warnings,
     env,
     db: null,
     auth: null,
@@ -71,8 +75,26 @@ export async function GET() {
   }
 
   try {
-    const { auth } = await import("@/lib/auth");
-    report.auth = { ok: Boolean(auth), baseURL: process.env.BETTER_AUTH_URL ?? null };
+    const { auth, baseURL, trustedOrigins, isGoogleConfigured, isLocalOrigin } =
+      await import("@/lib/auth");
+    // Hosts and booleans only — never secrets. A local baseURL in production is
+    // the classic cause of 403 INVALID_ORIGIN on every cookie-bearing auth POST.
+    report.auth = {
+      ok: Boolean(auth),
+      baseURL,
+      trustedOrigins,
+      googleConfigured: isGoogleConfigured(),
+    };
+    if (process.env.NODE_ENV === "production" && isLocalOrigin(baseURL)) {
+      warnings.push(
+        "BETTER_AUTH_URL points at a local address in production: cookie-bearing POSTs to /api/auth/* will fail with 403 INVALID_ORIGIN.",
+      );
+    }
+    if (process.env.NODE_ENV === "production" && !isGoogleConfigured()) {
+      warnings.push(
+        "GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET are empty or still placeholders: Google sign-in will fail even once the origin is correct.",
+      );
+    }
   } catch (error) {
     report.ok = false;
     report.auth = { ok: false, ...describe(error) };

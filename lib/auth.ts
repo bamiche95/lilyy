@@ -4,18 +4,54 @@ import { nextCookies } from "better-auth/next-js";
 
 import { prisma } from "./prisma";
 
-const baseURL = process.env.BETTER_AUTH_URL ?? "http://localhost:3000";
+const stripTrailingSlashes = (value?: string | null) =>
+  value?.trim().replace(/\/+$/, "") || undefined;
 
-const trustedOrigins = Array.from(
+/** `example.com` → `https://example.com`; Vercel exposes its hosts without a scheme. */
+const asOrigin = (value?: string | null) => {
+  const trimmed = stripTrailingSlashes(value);
+  if (!trimmed) return undefined;
+  return trimmed.includes("://") ? trimmed : `https://${trimmed}`;
+};
+
+export const isLocalOrigin = (origin: string) =>
+  /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?$/.test(origin);
+
+export const baseURL =
+  stripTrailingSlashes(process.env.BETTER_AUTH_URL) ?? "http://localhost:3000";
+
+/**
+ * Origins allowed to POST to `/api/auth/*`.
+ *
+ * Better Auth compares these exactly (see `dist/auth/trusted-origins.mjs`), so
+ * every entry must be a bare `scheme://host[:port]` with no trailing slash. A
+ * missing production origin silently breaks the whole auth surface: any request
+ * that carries a cookie is rejected with `403 INVALID_ORIGIN`, while a request
+ * without cookies passes — which makes the failure look intermittent.
+ *
+ * The Vercel-provided hosts keep preview deployments working without edits.
+ */
+export const trustedOrigins = Array.from(
   new Set(
     [
       baseURL,
-      process.env.NEXT_PUBLIC_SITE_URL,
+      asOrigin(process.env.NEXT_PUBLIC_SITE_URL),
+      asOrigin(process.env.VERCEL_PROJECT_PRODUCTION_URL),
+      asOrigin(process.env.VERCEL_BRANCH_URL),
+      asOrigin(process.env.VERCEL_URL),
       "http://localhost:3000",
       "http://127.0.0.1:3000",
     ].filter((origin): origin is string => Boolean(origin)),
   ),
 );
+
+if (process.env.NODE_ENV === "production" && isLocalOrigin(baseURL)) {
+  console.error(
+    "[auth] BETTER_AUTH_URL points at a local address in production. Every " +
+      "cookie-bearing POST to /api/auth/* will fail with 403 INVALID_ORIGIN. " +
+      "Set BETTER_AUTH_URL to the public HTTPS origin and redeploy.",
+  );
+}
 
 const googleClientId = process.env.GOOGLE_CLIENT_ID ?? "";
 const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET ?? "";
