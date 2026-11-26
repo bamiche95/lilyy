@@ -118,7 +118,7 @@ export default async function ShopPage({ params, searchParams }: PageProps) {
 
   return (
     <>
-      <section className="border-b border-cocoa/10 bg-crust">
+      <section className="border-b border-cocoa/10 bg-white">
         <div className="container-page py-12 sm:py-16">
           <p className="eyebrow">{dict.nav.shop}</p>
           <h1 className="mt-3 text-3xl sm:text-4xl">{dict.shop.title}</h1>

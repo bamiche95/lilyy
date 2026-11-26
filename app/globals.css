@@ -26,8 +26,11 @@
     -webkit-text-size-adjust: 100%;
   }
 
+  /* White page canvas: the header and footer carry the cocoa brand colour, so
+     the content between them stays neutral. `--color-cream` is still the token
+     for cream *surfaces* (header text, buttons, accent chips). */
   body {
-    background-color: var(--color-cream);
+    background-color: #ffffff;
     color: var(--color-cocoa);
     font-family: var(--font-sans);
     -webkit-tap-highlight-color: transparent;

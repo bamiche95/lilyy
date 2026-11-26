@@ -129,7 +129,7 @@ export default async function ProductPage({ params }: PageProps) {
 
   return (
     <>
-      <div className="border-b border-cocoa/10 bg-crust">
+      <div className="border-b border-cocoa/10 bg-white">
         <div className="container-page py-4 text-sm text-mocha">
           <Link href={shopHref(locale)} className="transition hover:text-cocoa">
             {dict.product.backToShop}

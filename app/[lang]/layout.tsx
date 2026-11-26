@@ -28,7 +28,9 @@ export const viewport: Viewport = {
   // Edge-to-edge inside the installed PWA; the tab bar and header pad
   // themselves with env(safe-area-inset-*).
   viewportFit: "cover",
-  themeColor: "#fbf7ef",
+  // Matches the white page canvas, so the PWA splash/status bar does not show a
+  // cream sliver above the content.
+  themeColor: "#ffffff",
 };
 
 export async function generateMetadata({
@@ -102,7 +104,7 @@ export default async function RootLayout({ children, params }: RootLayoutProps) 
       lang={LOCALE_META[lang].htmlLang}
       className={`h-full ${displayFont.variable} ${bodyFont.variable}`}
     >
-      <body className="flex min-h-full flex-col bg-cream pb-[calc(5.5rem+env(safe-area-inset-bottom))] text-cocoa antialiased md:pb-0">
+      <body className="flex min-h-full flex-col bg-white pb-[calc(5.5rem+env(safe-area-inset-bottom))] text-cocoa antialiased md:pb-0">
         <I18nProvider locale={lang} currency={currency} rates={getCurrencyRates()}>
           <CartProvider>
             <MobileMenuProvider>

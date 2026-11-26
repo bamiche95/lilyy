@@ -53,7 +53,7 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
 
   return (
     <>
-      <section className="border-b border-cocoa/10 bg-crust">
+      <section className="border-b border-cocoa/10 bg-white">
         <div className="container-page grid items-center gap-10 py-14 sm:py-20 lg:grid-cols-[1.1fr_1fr] lg:gap-16">
           <div>
             <p className="eyebrow">{content["brand.tagline"]}</p>
