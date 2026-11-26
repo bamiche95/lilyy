@@ -5,7 +5,12 @@ import { cookies } from "next/headers";
 import { z } from "zod";
 
 import { isCurrency } from "@/lib/currency";
-import { CURRENCY_COOKIE, LOCALE_COOKIE, isLocale } from "@/lib/i18n";
+import {
+  CURRENCY_COOKIE,
+  LEGACY_LOCALE_COOKIE,
+  LOCALE_COOKIE,
+  isLocale,
+} from "@/lib/i18n";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/session";
 
@@ -39,7 +44,13 @@ export async function setPreferences(
   const jar = await cookies();
   const attributes = { path: "/", maxAge: 60 * 60 * 24 * 365, sameSite: "lax" as const };
 
-  if (nextLocale) jar.set(LOCALE_COOKIE, nextLocale, attributes);
+  if (nextLocale) {
+    jar.set(LOCALE_COOKIE, nextLocale, attributes);
+    // The switcher is now the only writer; drop the old auto-detected cookie
+    // so it cannot override this choice.
+    jar.delete(LEGACY_LOCALE_COOKIE);
+  }
+
   if (nextCurrency) jar.set(CURRENCY_COOKIE, nextCurrency, attributes);
 
   const session = await getSession();

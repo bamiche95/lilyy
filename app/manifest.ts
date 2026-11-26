@@ -5,9 +5,11 @@ export default function manifest(): MetadataRoute.Manifest {
     name: "Lilyy Bakers",
     short_name: "Lilyy",
     description:
-      "Small-batch sourdough, cakes and pastries baked fresh every morning in Norway.",
+      "Småbatches surdeig, kaker og bakverk ferskt fra ovnen hver morgen i Norge.",
     id: "/",
-    start_url: "/en",
+    // Unprefixed on purpose: launching the installed app runs the same
+    // country/language detection as a first visit instead of forcing English.
+    start_url: "/",
     scope: "/",
     display: "standalone",
     // Installed app windows stay standalone; minimal-ui is the graceful fallback
@@ -17,7 +19,7 @@ export default function manifest(): MetadataRoute.Manifest {
     orientation: "portrait",
     background_color: "#fbf7ef",
     theme_color: "#3b2a20",
-    lang: "en",
+    lang: "nb",
     dir: "ltr",
     categories: ["food", "shopping", "lifestyle"],
     prefer_related_applications: false,
@@ -46,21 +48,21 @@ export default function manifest(): MetadataRoute.Manifest {
         name: "Admin dashboard",
         short_name: "Dashboard",
         description: "Sales, orders and today's bakery at a glance.",
-        url: "/en/admin",
+        url: "/admin",
         icons: [{ src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }],
       },
       {
         name: "Orders",
         short_name: "Orders",
         description: "Work through the order queue.",
-        url: "/en/admin/orders",
+        url: "/admin/orders",
         icons: [{ src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }],
       },
       {
         name: "Shop",
         short_name: "Shop",
         description: "Browse this morning's bakes.",
-        url: "/en/shop",
+        url: "/shop",
         icons: [{ src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" }],
       },
     ],

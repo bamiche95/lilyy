@@ -47,7 +47,7 @@ const serverSchema = z.object({
   R2_BUCKET_NAME: z.string().min(1),
   R2_PUBLIC_URL: z.url(),
 
-  DEFAULT_LOCALE: z.enum(["en", "no"]).default("en"),
+  DEFAULT_LOCALE: z.enum(["en", "no"]).default("no"),
   CURRENCY_RATES: z.string().optional(),
 
   STRIPE_SECRET_KEY: z.string().optional(),

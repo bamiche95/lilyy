@@ -143,6 +143,15 @@ jobs:
         with:
           image-ref: 'app-security-check:${{ github.sha }}'
           severity: 'CRITICAL'
+          # Same policy as the filesystem scan above. Most of this image is the
+          # upstream `node:24-alpine` base, so an advisory the Alpine or Node
+          # maintainers have not fixed yet is not something this repository can
+          # resolve; fixable CRITICALs still fail the job.
+          ignore-unfixed: true
+          # Reviewed suppressions must apply to the image too, otherwise the
+          # entries in .trivyignore.yaml would silently only cover the
+          # dependency scan and the same finding would keep failing this step.
+          trivyignores: '.trivyignore.yaml'
           exit-code: '1'
           format: 'sarif'
           output: 'trivy-image.sarif'
@@ -150,7 +159,7 @@ jobs:
       - name: Upload container scan results to code scanning
         if: always()
         continue-on-error: true
-        uses: github/codeql-action/upload-sarif@v3
+        uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: trivy-image.sarif
           category: trivy-image

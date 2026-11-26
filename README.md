@@ -57,7 +57,7 @@ serving 200.
 | Auth     | `BETTER_AUTH_SECRET` (32+ chars, `openssl rand -base64 32`), `BETTER_AUTH_URL`, `NEXT_PUBLIC_SITE_URL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`                        |
 | Mail     | `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM_NAME`, `ORDERS_EMAIL`, `SUPPORT_EMAIL`                                                   |
 | Storage  | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`, `R2_PUBLIC_URL`                                                                            |
-| Locale   | `DEFAULT_LOCALE`, `CURRENCY_RATES`                                                                                                                                       |
+| Locale   | `DEFAULT_LOCALE` (`no`), `CURRENCY_RATES`                                                                                                                                |
 | Stripe   | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` (optional, only when card payment is enabled)                                                                                |
 
 Production values differ from the local ones:
@@ -100,3 +100,73 @@ initialises.
 `503` with a non-empty `missingEnv` means the Vercel environment is not
 configured; `db.ok: false` points at the pooled connection string or the Neon
 compute; `auth.ok: false` points at `BETTER_AUTH_SECRET` / `BETTER_AUTH_URL`.
+
+## Locale and currency routing
+
+`proxy.ts` resolves both for every request; neither decision depends on the URL
+alone.
+
+The locale of an unprefixed URL, first match wins:
+
+1. `lilyy_locale_pref` — written **only** by the language switcher
+   (`lib/actions/preferences.ts`), so an explicit choice always wins.
+2. Country: `x-vercel-ip-country` (falling back to `cf-ipcountry`); `NO` → `no`.
+   Norway is the home market, so a Norwegian IP gets Norwegian even when the
+   browser is set to English.
+3. `Accept-Language`, ordered by q-value: `nb` / `nn` / `no` → `no`,
+   `en` → `en`, any other language → `en` (the international store).
+4. No signal at all (crawlers, `curl`) → `DEFAULT_LOCALE`, which defaults to
+   `no` and is read from the environment at request time.
+
+A prefixed path (`/en/...`, `/no/...`) is always respected, and there is no
+cross-language redirect, so links and the switcher can never loop. The
+auto-detection redirect is a `307` with `Cache-Control: private, no-store` and
+sets **no** cookie: a visitor who lands on the wrong language is re-checked on
+their next unprefixed visit instead of being pinned. The cookie an older build
+wrote on detection (`lilyy_locale`, one-year TTL) is expired on sight.
+
+Currency uses the same country header with `lilyy_currency` as the explicit
+override: `NO` → NOK, `GB` → GBP, `US` → USD, eurozone → EUR, otherwise `NOK`.
+
+`DEFAULT_LOCALE` is the no-signal fallback, not the detection rule, and it must
+also be set in the Vercel dashboard (Vercel ignores `.env.local`; see above).
+
+## Security pipeline
+
+`.github/workflows/devsecops.yml` gates every push and pull request: Gitleaks,
+Semgrep, a Trivy filesystem scan (`HIGH,CRITICAL`), then a `docker build` of the
+production image followed by a Trivy image scan (`CRITICAL`). Both Trivy steps
+run with `ignore-unfixed: true` and honour `.trivyignore.yaml`, so only findings
+this repository can actually fix fail the build.
+
+Reproduce a failure locally without Docker:
+
+```bash
+trivy fs --scanners vuln --severity HIGH,CRITICAL --ignore-unfixed \
+  --ignorefile .trivyignore.yaml .
+trivy image --image-src remote --severity CRITICAL node:24-alpine   # base layer
+```
+
+`next` and `eslint-config-next` are pinned to the same version and are bumped
+together: Next.js has shipped repeated CRITICAL advisories (RCE in the image
+optimization API, `use cache`, `next/og`) and the image ships the traced
+`node_modules`, so an outdated Next.js fails the container scan even though the
+Dockerfile never changes.
+
+### npm `overrides`
+
+`package.json#overrides` lifts three build/CLI-time transitive packages that the
+Trivy `HIGH` tier flags:
+
+| Package         | Pinned by                             | Fixed at  |
+| --------------- | ------------------------------------- | --------- |
+| `deepmerge-ts`  | `prisma` → `@prisma/config` (exact)   | `8.0.2`   |
+| `effect`        | `prisma` → `@prisma/config` (exact)   | `3.22.1`  |
+| `source-map-js` | `postcss` / `@tailwindcss/node`       | `1.2.2`   |
+
+`@prisma/config` pins its two dependencies to exact versions, so no install can
+move them without an override. None of the three reaches the runtime image —
+they are used by the Prisma CLI and the Tailwind build only. After editing that
+block, re-run `npm run db:generate`, `npm run db:status` and `npm run build`:
+a major bump such as `deepmerge-ts@8` would break `prisma` config loading, and
+the failure only shows up when the CLI runs, not at install time.

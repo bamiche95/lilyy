@@ -69,7 +69,8 @@ export async function generateMetadata({
     formatDetection: { telephone: false },
     alternates: {
       canonical: `/${lang}`,
-      languages: { en: "/en", no: "/no" },
+      // Norwegian is the home market, so it is also the x-default document.
+      languages: { en: "/en", no: "/no", "x-default": "/no" },
     },
     openGraph: {
       type: "website",

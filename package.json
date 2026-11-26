@@ -25,6 +25,11 @@
   "prisma": {
     "seed": "dotenv -e .env.local -- tsx prisma/seed.ts"
   },
+  "overrides": {
+    "deepmerge-ts": "8.0.2",
+    "effect": "3.22.1",
+    "source-map-js": "1.2.2"
+  },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1170.0",
     "@aws-sdk/s3-request-presigner": "^3.1170.0",
@@ -35,7 +40,7 @@
     "clsx": "^2.1.1",
     "framer-motion": "^14.14.0",
     "lucide-react": "^1.74.0",
-    "next": "16.2.4",
+    "next": "16.4.6",
     "nodemailer": "^10.6.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
@@ -52,7 +57,7 @@
     "@types/react-dom": "^19",
     "dotenv-cli": "^11.1.0",
     "eslint": "^9",
-    "eslint-config-next": "16.2.4",
+    "eslint-config-next": "16.4.6",
     "prisma": "^6.19.3",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
